@@ -1,0 +1,375 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('maincollaborationprojectmysql:server');
+var http = require('http');
+
+var Sharedb = require('sharedb');
+var ShareDBRedis = require('sharedb-redis-pubsub');
+var WebSocket = require('ws');
+var WebSocketJsonStream = require('websocket-json-stream');
+var redis = require('redis');
+var redisFunctions  = require('../redis/redisFunctions');
+var async = require('async');
+var asyncLoop  = require('node-async-loop');
+
+var share = new Sharedb({
+    pubsub : new ShareDBRedis({
+        client : redis.createClient(6379,'localhost'),
+        observer : redis.createClient(6379,'localhost')
+    })
+});
+
+var connection = share.connect();
+
+var sharePS =share.pubsub ;
+sharePS.subscribe("ffff",function (d,stream) {
+    if(d)
+        console.log(d);
+    console.log("fff : " );
+    sharePS.subscribe("operationProcess",function (op,stream) {
+        if(op)
+            console.log(op);
+        console.log("subscribed to operationProcess channel...");
+
+        sharePS.subscribe('linesProcess',function (li,stream) {
+            if(li)
+                console.log(li);
+
+            console.log('subscribed to linesProcess channel...');
+        });
+    })
+});
+
+// Create initial document then fire callback
+function createDoc(connection,id) {
+    //var connection = backend.connect();
+    var doc = connection.get("codepad", id);
+    doc.fetch(function(err) {
+        if (err) throw err;
+        if (doc.type === null) {
+            doc.create({"code": "function() {hello;}"});
+            console.log('doc created');
+
+        }
+
+        return;
+
+    });
+}
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '7000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+var io = require('socket.io').listen(server);
+
+sharePS.observer.on("message",function (channel,msg) {
+  /*if(channel === "operationProcess"){
+   console.log("message published to channel operationProcess received...");
+   console.log(msg);
+   var newMSG = JSON.parse(msg);
+   redisFunctions.addNewOperation(sharePS.client,newMSG.operation,function (opId) {
+   console.log("operation added :" + opId);
+   });
+   }*/
+    var newMSG = JSON.parse(msg);
+    if(channel === "linesProcess"){
+        console.log("message published to channel linesProcess received...");
+
+        redisFunctions.setLine(sharePS.client,newMSG.room,newMSG.lineNumber ,
+            newMSG.lineContent,function (lineId) {
+                console.log("line : " + lineId + " set" );
+            });
+
+
+        redisFunctions.getLineState(sharePS.client,newMSG.room,newMSG.lineNumber,function (err,state) {
+            console.log("line state : " + state);
+
+
+            //var socket = getSocketById(newMSG.socketId);
+            //console.log("socket pubsub : " + socket);
+            //console.log(socket.id);
+            console.log(newMSG.u);
+            io.sockets.emit('processDone',{u : newMSG.u , lineNumber : newMSG.lineNumber ,lineSate : state
+            });
+
+
+        });
+
+    }
+    else {
+        if (!newMSG.create) {
+            console.log("message received...");
+            console.log("channel : " + channel + " | message :" + msg);
+            sharePS.client.select(2);
+            console.log(msg);
+            redisFunctions.addNewOperation(sharePS.client, newMSG, function (opId) {
+                console.log("operation : " + opId + " added successfully");
+            });
+
+            redisFunctions.setLine(sharePS.client,newMSG,function () {
+                console.log("line/lines were being set" );
+            });
+
+          /*redisFunctions.setLinesReadonly(sharePS.client,newMSG,function (ok) {
+           console.log('lines state updated');
+           console.log(ok);
+           });*/
+
+
+            sharePS.client.set("channel", channel, function (err, reply) {
+                if (err)
+                    throw err;
+                console.log(reply);
+            });
+
+            console.log('redis on message');
+        }
+    }
+
+});
+
+
+// Connect any incoming WebSocket connection to ShareDB
+var wss = new WebSocket.Server({server: server});
+wss.on('connection', function(ws, req) {
+    var stream = new WebSocketJsonStream(ws);
+
+    var id = ws.upgradeReq.headers['sec-websocket-key'];
+    console.log("websocket id : "  + id);
+
+
+    ws.on('message',function (data) {
+
+        var obj = JSON.parse(data);
+
+        //    console.log(data);
+
+
+
+
+
+      /*if(obj.event && obj.event === 'keyup'){
+       console.log("keyup event received : " + data);
+       wss.clients.forEach(function (client) {
+       if(client !== ws && client.readyState === WebSocket.OPEN){
+       client.send({broadcast : 'keyup'});
+       }
+       });
+       } */
+
+
+
+      /*if(obj.keyup){
+       console.log(data);
+       console.log("clients number : " + wss.clients.length);
+       wss.clients.forEach(function (client) {
+       console.log(client.readyState)
+       if(client !== ws && client.readyState === WebSocket.OPEN){
+       client.send(JSON.stringify({broadcastMsg : 'kp'}));
+       }
+       else{
+       console.log("opended");
+       }
+       });
+       }*/
+
+      /* if(obj.texte !== undefined && obj.texte.length > 0){
+       console.log('input text : ' + obj.texte);
+       }*/
+    });
+
+    ws.on('close',function () {
+        console.log("client : " + id + " is disconnected");
+    });
+
+    share.listen(stream);
+});
+
+//socket stuff
+io.on('connection',function (socketio) {
+    console.log('a user connected');
+    console.log(socketio.id);
+
+    socketio.on('editorId',function (data) {
+        //createDoc(connection,data.editorId);
+        createDoc(connection,'editor');
+    });
+
+    socketio.on('editorBlur',function (data) {
+        console.log('user blur : ' + data.user);
+    });
+
+    socketio.on('foc',function (data) {
+        console.log('user ' + data.user + ' is focusing on writing');
+
+        //for(var prop in sharePS)
+        //  console.log(prop + " :" + sharePS[prop]);
+
+
+        console.log("subscribed : " + JSON.stringify(sharePS.subscribed));
+        //console.log("client : " + JSON.stringify(sharePS.client));
+
+
+        //io.sockets.connected[socketio.id].emit('my message');
+        socketio.broadcast.emit('focUser',{user : data.user});
+    });
+
+    socketio.on('operation',function (data) {
+        //console.log("operation :" + JSON.stringify(data.operation));
+        console.log("socket on message");
+        console.log("data :" + JSON.stringify(data));
+        console.log("oppopopop sending.....");
+        var linesReadOnly = [];
+        var loopArray = [];
+        for(var i = 0 ; i <= data.linesNumber ; i++){
+            loopArray.push(i);
+        }
+
+        asyncLoop(loopArray,function (item,next) {
+            redisFunctions.getLineState(sharePS.client,data.room,item,function (err,lineState) {
+                if(lineState == 'exists')
+                    linesReadOnly.push(item);
+
+                next();
+            });
+        }, function (err) {
+            if(err){
+                console.log('Error : ' + err.message);
+                return;
+            }
+
+            console.log("finished");
+            console.log(linesReadOnly);
+            socketio.broadcast.emit('linesReadOnly',{linesReadonly : linesReadOnly , room : data.room});
+        });
+
+      /*sharePS.publish("linesProcess",data,function () {
+
+       });*/
+    });
+
+    socketio.on('mouse-activity',function (data) {
+        //console.log(data);
+        var coords = { x : data.x , y : data.y};
+        socketio.broadcast.emit('all-mouse-activity',{sessionId : data.user , user : data.user,
+            project : data.project , coords : coords  });
+    });
+
+    socketio.on('user',function (data) {
+        socketio.username = data.user ;
+        socketio.broadcast.emit('new',{user : data.user , project : data.project});
+    });
+    //socket.broadcast.emit('connect',{})
+    socketio.on('userQuit',function (data) {
+
+
+        //console.log(socket.res);
+        console.log('one user quit');
+        //console.log(socket);
+
+        socketio.broadcast.emit('userHasQuit',{user : data.user , project : data.project});
+    });
+
+    socketio.on('colAdded',function (data) {
+        console.log(data.user);
+        socketio.broadcast.emit('newCol',{user : data.user , project : data.project });
+    });
+
+
+  /*socket.on('document-update',function (msg) {
+   console.log(msg);
+   redisConfig.EditText(msg.value,msg.docId,function () {
+   //if(err)
+   //  throw err;
+   redisConfig.getText(msg.docId,function (err,result) {
+   console.log(result);
+   io.sockets.emit('doc',{result : result , user : msg.user});
+
+   });
+   });
+   });*/
+
+});
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+    var port = parseInt(val, 10);
+
+    if (isNaN(port)) {
+        // named pipe
+        return val;
+    }
+
+    if (port >= 0) {
+        // port number
+        return port;
+    }
+
+    return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+    if (error.syscall !== 'listen') {
+        throw error;
+    }
+
+    var bind = typeof port === 'string'
+        ? 'Pipe ' + port
+        : 'Port ' + port;
+
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+        case 'EACCES':
+            console.error(bind + ' requires elevated privileges');
+            process.exit(1);
+            break;
+        case 'EADDRINUSE':
+            console.error(bind + ' is already in use');
+            process.exit(1);
+            break;
+        default:
+            throw error;
+    }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+    var addr = server.address();
+    var bind = typeof addr === 'string'
+        ? 'pipe ' + addr
+        : 'port ' + addr.port;
+    debug('Listening on ' + bind);
+}
+

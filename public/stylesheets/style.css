@@ -1,0 +1,189 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  background-image: url("../images/back.jpg");
+}
+
+a {
+  color: #00B7FF;
+}
+
+.pointer {
+  position: absolute;
+  background-image: url("../images/cursor.png");
+  background-repeat: no-repeat;
+  width: 40px;
+  height: 30px;
+  z-index: 3;
+
+}
+
+.pointer p {
+  margin-top: 20px;
+  color : #00a8c6;
+  font-family: "Comic Sans MS";
+  font-weight: 300;
+}
+
+.forgot-password {
+  float:right;
+  font-size: 80%;
+  position: relative;
+  top:-10px
+}
+
+#loginbox{
+  margin-top:50px;
+}
+
+#signupbox{
+  margin-top:50px
+}
+
+#project-box1, #project-box2 {
+  border: 2px #00B7FF solid ;
+  margin-top: 20px;
+  border-radius : 50px ;
+  padding: 10px ;
+  margin-right: 100px;
+  background : #a6e1ec;
+
+}
+
+
+
+#projets-title1 , #projets-title2 {
+  padding: 0px;
+  margin: 0px;
+  background: #a6e1ec ;
+}
+
+#btn-project {
+  margin : 28px ;
+  color: #bce8f1;
+  font : 15px bold ;
+  font-family: "Comic Sans MS"
+}
+
+#btn-doc {
+  margin : 5px 0 5px 23px;
+  color: #bce8f1;
+  font : 15px bold ;
+  font-family: "Comic Sans MS";
+  width : 80%;
+}
+
+#docs-box {
+  background-color: #fffbea;
+  border-radius: 20px;
+}
+
+#editor {
+  /*font: 14px/1.3 sans-serif;*/
+  /*padding: 4px 8px;*/
+  min-height: 500px ;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0;
+
+
+}
+
+#syncronized {
+  display: none;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #2e383c;
+
+}
+
+#container-box {
+  margin-top: 50px;
+  margin-left: 60px;
+}
+
+#collaboration-box, #options-box{
+  background-color: #fffbea;
+  border-radius: 15px;
+  padding: 3px 0 3px 15px;
+}
+
+#collaboration-box {
+  margin-bottom: 5px;
+}
+
+#right-menu-box {
+
+  margin-right : 40px;
+  float: right;
+  display: inline-block;
+}
+
+#options-list {
+  list-style-type : none;
+}
+
+#options-list li{
+  display: inline;
+  padding: 0 5px 0 5px;
+}
+
+.panel-info {
+  background-color: #fffbea;
+  border-radius: 20px;
+  margin-left: 50px;
+}
+
+#click-on-file {
+  font-family: "Comic Sans MS";
+  font-style: normal;
+  font-weight: bold;
+}
+
+.welcome {
+  color: #6eddff;
+  margin-top: 0;
+  padding-top: 0 ;
+}
+
+#welcome-menu {
+  list-style-type: none;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+#welcome-menu li {
+  display: inline;
+  padding: 0 5px 0 0;
+}
+
+.messages-box-child {
+  font-family: "Comic Sans MS";
+  color: red;
+
+}
+
+
+.input-group{
+  margin-bottom: 25px
+}
+
+.form-group{
+  /*margin-top:10px*/
+}
+
+.signinlink{
+  float:right; font-size: 85%; position: relative; top:-10px
+}
+
+.form-footer{
+  border-top: 1px solid#888;
+  padding-top:15px;
+  font-size:85%
+}
+
+#project {
+  display: none;
+
+}

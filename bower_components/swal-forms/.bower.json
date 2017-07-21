@@ -1,0 +1,31 @@
+{
+  "name": "swal-forms",
+  "description": "Plugin for adding forms to sweet alert",
+  "main": "swal-forms.js",
+  "authors": [
+    "Tomas Romero <canotto90@gmail.com>"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "swal-forms",
+    "sweet-alert"
+  ],
+  "homepage": "https://github.com/taromero/swal-forms",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "version": "0.3.1",
+  "_release": "0.3.1",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.3.1",
+    "commit": "c184f95934c08389572e685bbcdf665d30cce8c4"
+  },
+  "_source": "https://github.com/taromero/swal-forms.git",
+  "_target": "^0.3.1",
+  "_originalSource": "swal-forms"
+}

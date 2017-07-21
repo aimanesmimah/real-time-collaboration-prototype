@@ -1,0 +1,458 @@
+<div class="row">
+    <div style="float: left;width: 480px">
+{{#if utilisateur}}
+    <h3 id="welcome" class="welcome">Welcome {{utilisateur.username}} to {{title}} dashboard</h3>
+    <h1 id="project" class="welcome" >{{project.name}}...
+    <span style="display: inline-block;margin-left: 10px">
+    <ul id="welcome-menu">
+        <li><a id="btn-leaveProject" href="/" class="btn btn-primary">leave project</a></li>
+        <li><a id="btn-logout" href="/users/logout" class="btn btn-danger">logout</a></li>
+
+    </ul>
+    </span>
+    </h1>
+{{else}}
+    <h1>no user in the session</h1>
+{{/if}}
+    </div>
+    <div id="right-menu-box" class="col-md-3">
+     <div id="collaboration-box"  >
+
+    <h5 style="font-weight: bold">project created by :
+        <ul>
+        {{#if creator.isConnected }}
+            <li>{{creator.first_name}} {{creator.last_name}} : <span style="color: green">online</span> </li>
+        {{else}}
+            <li>{{creator.first_name}} {{creator.last_name}} : <span style="color : red">offline</span> </li>
+        {{/if}}
+        </ul>
+
+    </h5>
+          <h5 style="font-weight: bold" >collaborators :
+
+          </h5>
+    <ul>
+        {{#colls }}
+            {{#if isConnected }}
+                <li id="{{id}}">{{first_name}} {{last_name}} : <span style="color: green;">online</span></li>
+            {{else}}
+                <li id="{{id}}">{{first_name}} {{last_name}} : <span style="color: red;">offline</span></li>
+            {{/if}}
+        {{/colls}}
+    </ul>
+
+</div>
+        {{#if isCreator}}
+    <div id="options-box" >
+        <ul id="options-list">
+            <li><a id="add-collaborator-link" href="#"><img title="add collaborator" src="/images/add-user.png" /></a></li>
+            <li><a id="list-collaborations" href="#"><img title="edit collaboration" src="/images/pencil2.png" /></a></li>
+        </ul>
+    </div>
+        {{/if}}
+    </div>
+
+</div>
+
+<br/><br/><br/>
+<div id="container-box" class="row" >
+    <div id="docs-box" class="col-md-3" >
+        <h3 align="center">docs...</h3>
+        {{#if auth.addNewDoc }}
+            <button id="btn-addDoc" style="margin: 0 0 10px 60px;"
+               class="button button-3d button-action button-pill">Add new</button>
+        {{else}}
+            <button id="btn-addDoc" style="margin: 0 0 10px 50px;"
+                    disabled="disabled" class="button button-3d button-action button-pill">u can't add :(</button>
+        {{/if}}
+
+        {{#docs}}
+            <!--<div id="doc-box" class="col-md-3">-->
+
+                <a id="btn-doc" class="btn btn-primary" href="/getDoc/{{id}}">{{name}}.{{type}}</a>
+
+            <!--</div>-->
+            <br/>
+        {{/docs}}
+
+
+
+    </div>
+    <div  class="container" >
+        <div class="panel panel-info col-md-8">
+            <div class="panel-heading">
+                <div id="title-div" class="panel-title">{{doc.name}} </div>
+
+                <div class="forgot-password" ><a id="btn-close-doc" href="#">Close doc?</a></div>
+            </div>
+            <div class="panel-body">
+
+                <div id="editor-box">
+                    <button id="syncResource_btn"  class="button button-raised button-pill button-inverse">
+                        synchronize resource
+                    </button>
+                    <p id="syncronized" >synchronized</p>
+                    <ul id="messages-box"></ul>
+                    <pre id="editor" ></pre>
+                </div>
+
+                <div id="no-editor-box">
+
+                    <h1 id="click-on-file" align="center">Click on a file...</h1>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+<script type="text/javascript" src="/javascripts/socket.io.js" ></script>
+<script type="text/javascript" src="/ace-builds/src-noconflict/ace.js" ></script>
+<script type="text/javascript" src="/jquery/dist/jquery.min.js" ></script>
+<script type="text/javascript" src="/sweetalert/dist/sweetalert.min.js" ></script>
+<link rel="stylesheet" type="text/css" href="/sweetalert/dist/sweetalert.css"  />
+<script type="text/javascript" src="/sweetalert2/dist/sweetalert2.js" ></script>
+<link rel="stylesheet" type="text/css" href="/sweetalert2/dist/sweetalert2.css"  />
+<script type="text/javascript" src="/javascripts/swal-forms.js" ></script>
+<link rel="stylesheet" type="text/css" href="/stylesheets/swal-forms.css" />
+<script type="text/javascript" src="/javascripts/notify.js" ></script>
+<script type="text/javascript" src="/javascripts/jquery.fittext.js" ></script>
+<script type="text/javascript" src="/javascripts/jquery.lettering.js" ></script>
+<script type="text/javascript" src="/javascripts/jquery.textillate.js" ></script>
+<link type="text/css" rel="stylesheet" href="/stylesheets/animate.css"/>
+<script src="http://yandex.st/highlightjs/7.3/highlight.min.js"></script>
+
+<script>hljs.initHighlightingOnLoad();</script>
+<script>
+
+    var socket = io();
+
+    function projectDocs(el) {
+        var docsId = [];
+        console.log(el.childNodes.length);
+        for(var i =0 ; i < el.childNodes.length ; i++){
+            if(el.childNodes[i].tagName == 'A') {
+                var href = el.childNodes[i].getAttribute('href');
+                var id = href.split('/')[2];
+                docsId.push(id);
+            }
+        }
+        console.log(docsId.length);
+        return docsId;
+    }
+
+    /*function append_messages_box(m,user) {
+        if(m.childNodes.length == 0){
+            var li = document.createElement("li");
+            li.innerText = user + " is working on this doc..." ;
+            li.className  = "messages-box-child" ;
+            m.appendChild(li);
+        }
+    }*/
+
+    function projectName() {
+        var proj = document.getElementById('project');
+        var name = proj.innerText.split('.');
+        console.log('project name' + name[0] + 'ff');
+        return name[0];
+    }
+
+    function swalFormCollaborator(error,options) {
+        swal({
+            title: 'add new collaborator',
+            input : 'select' ,
+            inputOptions : options ,
+            inputPlaceholder : 'select a user ',
+            showCancelButton: true,
+            confirmButtonText: 'add',
+            confirmButtonColor: '#22ee78',
+            inputValidator : function (value) {
+                return new Promise(function (resolve,reject) {
+                    if(value === '')
+                        reject('you need to choose a user first');
+                    else
+                        resolve();
+                });
+            }
+
+        }).then(function (result) {
+            swal({
+                type : 'success' ,
+                html : 'You selected: ' + result ,
+                showCancelButton : false,
+                confirmButtonText : 'loading authorization form...' ,
+                timer : 2000
+
+            }).then(
+                    function(){} ,
+                    function (dismiss) {
+                        if(dismiss === 'timer')
+                            swal({
+                                title : 'add authorization' ,
+                                html : 'user : ' + result + '<br/> no collaboration will be added without authorization<br/><br/>' +
+                                '<input type="checkbox" name="addFile"  /><span style="margin-left: 5px">add file allowed ?</span><br/>' +
+                                '<input type="checkbox" name="removeFile"  /><span style="margin-left: 5px">remove file allowed ?</span><br/>' +
+                                '<h4 style="color : #785412">files allowed</h4>' +
+                                '{{#docs}} <input id="{{id}}" type="checkbox" name="{{id}}"  /> <span style="margin: 0 10px 0 2px">{{name}}.{{type}}</span>{{/docs}}',
+                                confirmButtonText : 'add'
+                            }).then(function () {
+                                var data = {};
+                                data.addFileChecked = $('input[name=addFile]').is(':checked');
+                                data.removeFileChecked = $('input[name=removeFile]').is(':checked');
+                                var docsId = projectDocs(docs_box);
+                                var docs = [];
+                                docsId.forEach(function (docId) {
+
+                                    console.log(docId + " :" + $('input[name='+ docId +']').is(":checked"));
+
+                                    docs.push({docId : docId , allowed : $('input[name='+ docId +']').is(':checked')});
+                                });
+
+                                data.docs = docs ;
+                                console.log(data.docs.length);
+                                data.user = result;
+                                data.projectName = projectName();
+
+                                $.ajax({
+                                    url : '/saveCollaborationData' ,
+                                    method : 'POST' ,
+                                    data : JSON.stringify(data)
+
+                                }).done(function (data) {
+                                    console.log(data.user);
+                                    swal({
+                                        title : 'success !' ,
+                                        type : 'success' ,
+                                        html : "Collaboration : "+ data.newColId + "<br/>added successfully"
+                                    });
+                                    //swal("success !","Collaboration : "+ data.newColId + "\nadded successfully","success");
+                                    socket.emit('colAdded',{user : data.user , project : projectName()});
+                                }).error(function (data) {
+                                    swal("Error", "Collaboration could not be added", "error");
+                                });
+                            });
+                    }
+            );
+
+            swal.disableConfirmButton();
+        });
+
+
+
+    }
+
+    function swalAddDoc() {
+        swal({
+           title : 'add new Doc' ,
+            html : '<h3>text</h3><br/><select id="type-options" name="type-options" >' +
+        '<option value="view">view</option><option value="js">JS</option><option value="css">CSS</option></select>' +
+        '<br/><br/><input type="text" name="docName" />' ,
+            confirmButtonText : 'add' ,
+            showCancelButton : true
+        }).then(function () {
+            
+        });
+    }
+
+    function textChanged() {
+        console.log("changed");
+    }
+
+
+    var logout = document.getElementById('btn-logout');
+    var addCollaborator = document.getElementById('add-collaborator-link');
+    var btn_addDoc = document.getElementById('btn-addDoc');
+    var leave_project = document.getElementById('btn-leaveProject');
+    var docs_box = document.getElementById('docs-box');
+    var editor = document.getElementById('editor-box');
+    var no_edit = document.getElementById('no-editor-box');
+    var info_div = document.getElementById('title-div');
+    var btn_close_doc = document.getElementById('btn-close-doc');
+    var href = window.location.href.split('/');
+    var welcome = document.getElementById('welcome');
+    var user = welcome.innerText.split(" ")[1];
+
+
+
+    if(href[3] === "project"){
+        console.log("dok");
+        editor.style.display = "none" ;
+        no_edit.style.display = "inline" ;
+
+        info_div.innerText = "no document" ;
+
+    }
+
+    btn_close_doc.onclick = function () {
+        editor.style.display = "none" ;
+        no_edit.style.display = "inline";
+        info_div.innerText = "no document" ;
+    };
+
+
+
+    $(document).on('mousemove',function (event) {
+        socket.emit('mouse-activity',{x: event.pageX , y : event.pageY ,
+            user : user , project : projectName()});
+    });
+
+    socket.on('all-mouse-activity',function (data) {
+        console.log(data.user);
+        if(projectName() === data.project) {
+            if ($('.pointer[session_id="' + data.sessionId + '"]').length <= 0) {
+                $('body').append('<div class="pointer"  session_id="' + data.sessionId + '"><p>' + data.user + '</p></div>');
+            }
+
+            var $pointer = $('.pointer[session_id="' + data.sessionId + '"]');
+
+            $pointer.css('left', data.coords.x);
+            $pointer.css('top', data.coords.y);
+
+        }
+    });
+
+    socket.on('connect',function () {
+        console.log("connected");
+        if(window.href[3] !== 'getDoc')
+            socket.emit('user',{user : user , project : projectName()});
+    });
+
+    socket.on('new',function (data) {
+        if(projectName() === data.project)
+            $.notify("User " + data.user + " has joined", {position: 'top center', showAnimation: 'slideDown',
+                className : 'info'});
+
+    });
+
+    socket.on('newCol',function (data) {
+        if(projectName() === data.project)
+            $.notify("User " + data.user + " has been added to the collaboration", {position: 'top center', showAnimation: 'slideDown',
+                className : 'info'});
+    });
+
+    var docs_box_clicked = false ;
+    var leave_btn_clicked = false ;
+    var logout_btn_clicked = false ;
+    docs_box.onclick = function () {
+        docs_box_clicked = true ;
+    };
+
+    window.onunload = function () {
+
+        if(!docs_box_clicked && !leave_btn_clicked && !logout_btn_clicked)
+            socket.emit('userQuit',{user:user , project : projectName()});
+    };
+
+    logout.onclick = function () {
+        logout_btn_clicked = true ;
+        socket.emit('userQuit',{user:user, project : projectName()});
+    };
+
+    leave_project.onclick = function () {
+        leave_btn_clicked = true ;
+        socket.emit('userQuit',{user:user , project : projectName()});
+    };
+
+    socket.on('userHasQuit',function (data) {
+        if(projectName() === data.project) {
+            console.log('disconnected');
+            $.notify("User " + data.user + " has quiet",{position: 'top center', showAnimation: 'slideDown',
+                className : 'info'});
+            var $pointer = $('.pointer[session_id="' + data.user + '"]');
+            $pointer.remove();
+        }
+    });
+
+
+    $('#welcome').textillate({
+        in: { effect: 'fadeInLeftBig' , sync : false } ,
+        out : { effect : 'bounceOut'} ,
+        loop : true ,
+        minDisplayTime: 500,
+        callback : function () {
+
+        }
+    });
+
+    $('#welcome').on('outAnimationBegin.tlt',function () {
+           $('#project').show();
+    });
+
+
+    if(href[3] === 'project') {
+        var currentDate = new Date(),
+                hours = currentDate.getHours();
+
+        if (hours < 12)
+            $.notify("Good morning", {position: 'top center'});
+        else
+            $.notify("Good evening", {position: 'top center', showAnimation: 'slideDown'});
+
+        $.notify("another notification", {position: 'top center', showAnimation: 'slideDown'});
+    }
+
+
+    btn_addDoc.onclick = function () {
+        swalAddDoc();
+    };
+
+
+    if(addCollaborator) {
+        addCollaborator.onclick = function () {
+            $.ajax({
+                url : '/getUsers' ,
+                success : function (result,statut,xhr) {
+                    console.log(result);
+
+                    var options = {};
+
+                    result.forEach(function (obj) {
+                       options[obj.username] = obj.first_name + ' ' + obj.last_name ;
+                    });
+
+
+                    swalFormCollaborator('no text',options);
+
+
+                }
+            });
+
+        };
+    }
+
+
+
+
+    /*if(window.href[3] !== 'project') {
+        $.ajax({
+            url: '/getData/' + window.href[4],
+            success: function (result, statut, xhr) {
+
+                //myCodeMirror.setValue(result.text);
+                //console.log(result);
+            }
+        });
+    }*/
+
+
+    /*setInterval(function () {
+
+         myCodeMirror.setOption("readOnly",false);
+         if(m.childNodes.length > 0) {
+             for(var i = 0 ; i < m.childNodes.length ; i++)
+                 m.removeChild(m.childNodes[i]);
+         }
+    },10000);*/
+
+    /*setInterval(function () {
+        $.ajax({
+            url : '/saveData/' + window.href[4] ,
+            success : function (result,statut,xhr) {
+
+            }
+        });
+    },60000);*/
+</script>
+{{#if doc}}
+    <script type="text/javascript" src="/bundle/bundle3.js"></script>
+{{/if}}

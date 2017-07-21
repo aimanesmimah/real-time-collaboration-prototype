@@ -1,0 +1,61 @@
+
+{{#if utilisateur}}
+<h1 class="welcome">Welcome {{utilisateur.username}} to {{title}} dashboard</h1>
+<a href="/users/logout" class="btn btn-default">logout</a>
+{{else}}
+<h1>no user in the session</h1>
+{{/if}}
+
+<div class="container">
+   <div id="project-box1" class="mainbox col-md-12 col-sm-8 ">
+
+       <div class="panel panel-body" style="background: #a6e1ec">
+           <div class="panel-heading">
+               <h3 id="projets-title1"> your Projects...</h3>
+           </div>
+           <div class="projects-box">
+               <ul>
+               {{#projects}}
+                   <form method="post" action="/project" >
+                   <div id="project1" >
+                       <input type="hidden" name="projectName" value="{{name}}" />
+                       <button id="btn-project" type="submit" class="btn btn-primary col-sm-3">
+                           {{name}}
+                           <br/>
+                           {{description}}
+                       </button>
+                   </div>
+                   </form>
+               {{/projects}}
+               </ul>
+           </div>
+       </div>
+
+
+
+   </div>
+    <br/>
+    <div id="project-box2" class="mainbox col-md-12 col-sm-8 " >
+        <div class="panel panel-body" style="background: #a6e1ec">
+            <div class="panel-heading">
+                <h3 id="projets-title2"> Projects in Collaboration...</h3>
+            </div>
+            <div class="projects-box">
+                <ul>
+                    {{#projectsInCollabs}}
+                        <form method="post" action="/project" >
+                            <div id="project2" >
+                                <input type="hidden" name="projectName" value="{{name}}" />
+                                <button id="btn-project" type="submit" class="btn btn-primary col-sm-3">
+                                    {{name}}
+                                    <br/>
+                                    {{description}}
+                                </button>
+                            </div>
+                        </form>
+                    {{/projectsInCollabs}}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
