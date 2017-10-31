@@ -22,6 +22,12 @@
     "sweetalert2": "^6.6.5",
     "Buttons": "^2.0.0",
     "textillate": "^0.4.0",
-    "ace-builds": "^1.2.8"
+    "ace-builds": "^1.2.8",
+    "color-hash": "^1.0.3",
+    "jquery.sidebar": "*",
+    "simpler-sidebar": "^2.2.2"
+  },
+  "resolutions": {
+    "jquery": ">=1.6"
   }
 }

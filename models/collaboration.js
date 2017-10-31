@@ -30,6 +30,10 @@ module.exports = function (seq) {
             type : seq.Sequelize.BOOLEAN,
             allowNull : false
         },
+        color : {
+            type : seq.Sequelize.STRING,
+            allowNull : false
+        },
         authorizationId : {
             type : seq.Sequelize.INTEGER ,
             allowNull : false

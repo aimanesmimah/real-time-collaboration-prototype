@@ -1,0 +1,162 @@
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 col-sm-12 col-xs-12" style="float: left">
+            {{#if utilisateur}}
+
+                    <div class="col-md-5 col-sm-12 logo-box">
+
+                        <img src="/images/screendyDASH.png" title="{{title}}"/>
+
+                    </div>
+                    <div class="col-md-5 col-sm-12 user-box">
+                        <ul class="infos">
+                            <li><h4 id="welcome" class="welcome">{{utilisateur.username}}</h4></li>
+                            <li><h4 class="welcome">projects created : {{projects.length}}</h4></li>
+                            <li><h4 class="welcome">projects in collaboration : {{projectsInCollabs.length}} </h4></li>
+                        </ul>
+
+                    </div>
+
+
+
+            {{else}}
+                <h1>no user in the session</h1>
+            {{/if}}
+        </div>
+        <div class="col-md-2 col-sm-12 col-xs-12 logout" >
+            <a href="/users/logout" class="btn-logout"><img src="/images/primary-logout.png" title="logout" style="float: right" /></a>
+        </div>
+    </div>
+    <br><br>
+    <div class="row">
+    <div class="panel panel-body projects-container">
+        <div class="panel-heading row">
+            <h3 id="projets-title1"> your Projects...</h3>
+            <button id="btn-addProj"
+                    class="button button-royal button-pill button-rounded">Add new</button>
+
+        </div>
+        <div class="panel-body row">
+             <div class="projects">
+        {{#projects}}
+            <div class="col-sm-6 col-md-4" >
+                <form method="post" action="/project" >
+                    <input type="hidden" name="projectName" value="{{name}}" />
+                        <div class="thumbnail project-box" >
+
+                            <div id="project-information" class="caption">
+                                <h3 >{{name}}</h3>
+                                {{#if description}}
+                                   <p >{{description}}</p>
+                                {{else}}
+                                    <p>no description</p>
+                                {{/if}}
+                                <p>
+
+                                    <button type="submit" id="btn-project"
+                                            class="button button-primary button-pill button-small"
+                                            role="button" style="margin-bottom: 0px">Open</button>
+
+                                    <button  id="btn-project"
+                                             class="button button-caution button-pill button-small"
+                                             role="button" >Remove</button>
+                                </p>
+                            </div>
+                        </div>
+                </form>
+            </div>
+        {{/projects}}
+    </div>
+        </div>
+    </div>
+    </div>
+    <div class="row">
+        <div class="panel panel-body projects-container" >
+            <div class="panel-heading row">
+                <h3 id="projets-title1">Projects in collaboration...</h3>
+
+
+
+            </div>
+            <div class="panel-body row">
+                <div class="projects">
+                    {{#projectsInCollabs}}
+                        <div class="col-sm-6 col-md-4" >
+                            <form method="post" action="/project" >
+                                <input type="hidden" name="projectName" value="{{name}}" />
+                                <div class="thumbnail project-box" >
+
+                                    <div id="project-information" class="caption">
+                                        <h3 >{{name}}</h3>
+                                        {{#if description}}
+                                            <p >{{description}}</p>
+                                        {{else}}
+                                            <p>no description</p>
+                                        {{/if}}
+                                        <p>
+
+                                            <button type="submit" id="btn-project"
+                                                    class="button button-primary button-pill button-small"
+                                                    role="button" style="margin-bottom: 0px">Open</button>
+
+                                            <button  id="btn-project"
+                                                     class="button button-caution button-pill button-small"
+                                                     role="button">Remove</button>
+                                        </p>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    {{/projectsInCollabs}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="/sweetalert/dist/sweetalert.min.js" ></script>
+<link rel="stylesheet" type="text/css" href="/sweetalert/dist/sweetalert.css"  />
+<script type="text/javascript" src="/sweetalert2/dist/sweetalert2.js" ></script>
+<link rel="stylesheet" type="text/css" href="/sweetalert2/dist/sweetalert2.css"  />
+<script type="text/javascript" src="/javascripts/swal-forms.js" ></script>
+<link rel="stylesheet" type="text/css" href="/stylesheets/swal-forms.css" />
+<script>
+    var btn_addproj = document.getElementById('btn-addProj');
+    var username = document.getElementById('welcome').innerText;
+
+    function swalAddProject() {
+        swal({
+            title: 'add new Project',
+            html: '<br/><input class="form-control" type="text" name="projName"  placeholder="project name"/><br/>' +
+            '<textarea class="form-control" name="description" placeholder="project description"></textarea>',
+            confirmButtonText: 'add',
+            showCancelButton: true
+        }).then(function () {
+            console.log($('input[name=projName]').val() );
+            if ($('input[name=projName]').val() == "" || $('input[name=projName]').val() == null ) {
+                swal("Error", "enter data properly", "error").then(function () {
+
+                    return;
+                });
+            }
+            else {
+
+                var data = {};
+                data.name = $('input[name=projName]').val();
+                data.description = $('textarea[name=description]').val();
+                data.username = username;
+                $.ajax({
+                    url: '/saveProjectData',
+                    method: 'POST',
+                    data: JSON.stringify(data)
+                }).done(function (data) {
+                    swal("success", "project number " +data.projId + " added successfully", "success");
+                });
+            }
+        });
+
+    }
+
+    btn_addproj.onclick = function () {
+        swalAddProject();
+    };
+</script>

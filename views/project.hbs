@@ -2,6 +2,7 @@
     <div style="float: left;width: 480px">
 {{#if utilisateur}}
     <h3 id="welcome" class="welcome">Welcome {{utilisateur.username}} to {{title}} dashboard</h3>
+    <h3 id="collaboration-color" class="welcome">Collaboration color :{{col.color }}</h3>
     <h1 id="project" class="welcome" >{{project.name}}...
     <span style="display: inline-block;margin-left: 10px">
     <ul id="welcome-menu">
@@ -54,8 +55,10 @@
 
 </div>
 
-<br/><br/><br/>
-<div id="container-box" class="row" >
+
+<div class="container">
+    <div class="row">
+<div id="container-box"  >
     <div id="docs-box" class="col-md-3" >
         <h3 align="center">docs...</h3>
         {{#if auth.addNewDoc }}
@@ -78,7 +81,7 @@
 
 
     </div>
-    <div  class="container" >
+
         <div class="panel panel-info col-md-8">
             <div class="panel-heading">
                 <div id="title-div" class="panel-title">{{doc.name}} </div>
@@ -104,11 +107,11 @@
             </div>
         </div>
 
+</div>
     </div>
 </div>
 <script type="text/javascript" src="/javascripts/socket.io.js" ></script>
 <script type="text/javascript" src="/ace-builds/src-noconflict/ace.js" ></script>
-<script type="text/javascript" src="/jquery/dist/jquery.min.js" ></script>
 <script type="text/javascript" src="/sweetalert/dist/sweetalert.min.js" ></script>
 <link rel="stylesheet" type="text/css" href="/sweetalert/dist/sweetalert.css"  />
 <script type="text/javascript" src="/sweetalert2/dist/sweetalert2.js" ></script>
@@ -121,11 +124,25 @@
 <script type="text/javascript" src="/javascripts/jquery.textillate.js" ></script>
 <link type="text/css" rel="stylesheet" href="/stylesheets/animate.css"/>
 <script src="http://yandex.st/highlightjs/7.3/highlight.min.js"></script>
+<script type="text/javascript" src="/color-hash/dist/color-hash.js" ></script>
 
 <script>hljs.initHighlightingOnLoad();</script>
 <script>
 
-    var socket = io();
+    $('#doc-added').textillate({
+                in: {effect: 'rotateIn', sync: false},
+                out: {
+                    effect: 'bounceOut', callback: function () {
+                    }
+                },
+                minDisplayTime: 1000,
+                loop: true,
+                callback: function () {
+                }
+            });
+
+    var socketMouse = io('/mouse');
+    var socketNotifs = io('/notifications');
 
     function projectDocs(el) {
         var docsId = [];
@@ -141,14 +158,6 @@
         return docsId;
     }
 
-    /*function append_messages_box(m,user) {
-        if(m.childNodes.length == 0){
-            var li = document.createElement("li");
-            li.innerText = user + " is working on this doc..." ;
-            li.className  = "messages-box-child" ;
-            m.appendChild(li);
-        }
-    }*/
 
     function projectName() {
         var proj = document.getElementById('project');
@@ -226,7 +235,7 @@
                                         html : "Collaboration : "+ data.newColId + "<br/>added successfully"
                                     });
                                     //swal("success !","Collaboration : "+ data.newColId + "\nadded successfully","success");
-                                    socket.emit('colAdded',{user : data.user , project : projectName()});
+                                    socketNotifs.emit('colAdded',{user : data.user , project : projectName()});
                                 }).error(function (data) {
                                     swal("Error", "Collaboration could not be added", "error");
                                 });
@@ -241,17 +250,41 @@
 
     }
 
+
     function swalAddDoc() {
         swal({
-           title : 'add new Doc' ,
-            html : '<h3>text</h3><br/><select id="type-options" name="type-options" >' +
-        '<option value="view">view</option><option value="js">JS</option><option value="css">CSS</option></select>' +
-        '<br/><br/><input type="text" name="docName" />' ,
-            confirmButtonText : 'add' ,
-            showCancelButton : true
+            title: 'add new Doc',
+            html: '<select id="type-options" name="type-options" placeholder="select a type">' +
+            '<option value="" disabled selected >select type</option>' +
+            '<option value="view">view</option><option value="js">JS</option>' +
+            '<option value="css">CSS</option></select>' +
+            '<br/><br/><input type="text" name="docName"  placeholder="doc name"/>',
+            confirmButtonText: 'add',
+            showCancelButton: true
         }).then(function () {
-            
+            if ($('input[name=docName]').val() == "" || $('select[name=type-options]').val() == null) {
+                swal("Error", "enter data properly", "error").then(function () {
+
+                    return;
+                });
+            }
+            else {
+                console.log($('input[name=docName]').val());
+                console.log($('select[name=type-options]').val());
+                var data = {};
+                data.name = $('input[name=docName]').val();
+                data.type = $('select[name=type-options]').val();
+                data.project = projectName();
+                $.ajax({
+                    url: '/saveDocData',
+                    method: 'POST',
+                    data: JSON.stringify(data)
+                }).done(function (data) {
+                    swal("success", "doc added successfully", "success");
+                });
+            }
         });
+
     }
 
     function textChanged() {
@@ -274,6 +307,7 @@
 
 
 
+
     if(href[3] === "project"){
         console.log("dok");
         editor.style.display = "none" ;
@@ -290,42 +324,48 @@
     };
 
 
+    socketMouse.on('connect',function () {
+        socketMouse.emit('socketConnected',{user : user , project : projectName()})
+    });
 
     $(document).on('mousemove',function (event) {
-        socket.emit('mouse-activity',{x: event.pageX , y : event.pageY ,
+        socketMouse.emit('mouse-activity',{x: event.pageX , y : event.pageY ,
             user : user , project : projectName()});
     });
 
-    socket.on('all-mouse-activity',function (data) {
+    socketMouse.on('all-mouse-activity',function (data) {
         console.log(data.user);
-        if(projectName() === data.project) {
+        //if(projectName() === data.project) {
             if ($('.pointer[session_id="' + data.sessionId + '"]').length <= 0) {
-                $('body').append('<div class="pointer"  session_id="' + data.sessionId + '"><p>' + data.user + '</p></div>');
+                console.log('dkhooool');
+                $('body').append('<div class="pointer"  session_id="' + data.sessionId + '"><p>' + data.sessionId + '</p></div>');
             }
 
             var $pointer = $('.pointer[session_id="' + data.sessionId + '"]');
 
+            //$pointer.css('display','inline');
             $pointer.css('left', data.coords.x);
             $pointer.css('top', data.coords.y);
 
-        }
+      //  }
     });
 
-    socket.on('connect',function () {
+    socketNotifs.on('connect',function () {
+        socketNotifs.emit('socketConnected',{user : user , project : projectName()});
         console.log("connected");
         if(window.href[3] !== 'getDoc')
-            socket.emit('user',{user : user , project : projectName()});
+            socketNotifs.emit('user',{user : user , project : projectName()});
     });
 
-    socket.on('new',function (data) {
-        if(projectName() === data.project)
+    socketNotifs.on('new',function (data) {
+        //if(projectName() === data.project)
             $.notify("User " + data.user + " has joined", {position: 'top center', showAnimation: 'slideDown',
                 className : 'info'});
 
     });
 
-    socket.on('newCol',function (data) {
-        if(projectName() === data.project)
+    socketNotifs.on('newCol',function (data) {
+        //if(projectName() === data.project)
             $.notify("User " + data.user + " has been added to the collaboration", {position: 'top center', showAnimation: 'slideDown',
                 className : 'info'});
     });
@@ -340,27 +380,27 @@
     window.onunload = function () {
 
         if(!docs_box_clicked && !leave_btn_clicked && !logout_btn_clicked)
-            socket.emit('userQuit',{user:user , project : projectName()});
+            socketNotifs.emit('userQuit',{user:user , project : projectName()});
     };
 
     logout.onclick = function () {
         logout_btn_clicked = true ;
-        socket.emit('userQuit',{user:user, project : projectName()});
+        socketNotifs.emit('userQuit',{user:user, project : projectName()});
     };
 
     leave_project.onclick = function () {
         leave_btn_clicked = true ;
-        socket.emit('userQuit',{user:user , project : projectName()});
+        socketNotifs.emit('userQuit',{user:user , project : projectName()});
     };
 
-    socket.on('userHasQuit',function (data) {
-        if(projectName() === data.project) {
+    socketNotifs.on('userHasQuit',function (data) {
+        //if(projectName() === data.project) {
             console.log('disconnected');
             $.notify("User " + data.user + " has quiet",{position: 'top center', showAnimation: 'slideDown',
                 className : 'info'});
             var $pointer = $('.pointer[session_id="' + data.user + '"]');
             $pointer.remove();
-        }
+        //}
     });
 
 
@@ -396,7 +436,6 @@
         swalAddDoc();
     };
 
-
     if(addCollaborator) {
         addCollaborator.onclick = function () {
             $.ajax({
@@ -421,37 +460,6 @@
     }
 
 
-
-
-    /*if(window.href[3] !== 'project') {
-        $.ajax({
-            url: '/getData/' + window.href[4],
-            success: function (result, statut, xhr) {
-
-                //myCodeMirror.setValue(result.text);
-                //console.log(result);
-            }
-        });
-    }*/
-
-
-    /*setInterval(function () {
-
-         myCodeMirror.setOption("readOnly",false);
-         if(m.childNodes.length > 0) {
-             for(var i = 0 ; i < m.childNodes.length ; i++)
-                 m.removeChild(m.childNodes[i]);
-         }
-    },10000);*/
-
-    /*setInterval(function () {
-        $.ajax({
-            url : '/saveData/' + window.href[4] ,
-            success : function (result,statut,xhr) {
-
-            }
-        });
-    },60000);*/
 </script>
 {{#if doc}}
     <script type="text/javascript" src="/bundle/bundle3.js"></script>

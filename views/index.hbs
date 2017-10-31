@@ -1,6 +1,6 @@
 
 {{#if utilisateur}}
-<h1 class="welcome">Welcome {{utilisateur.username}} to {{title}} dashboard</h1>
+<h1 id="welcome" class="welcome">Welcome {{utilisateur.username}} to {{title}} dashboard</h1>
 <a href="/users/logout" class="btn btn-default">logout</a>
 {{else}}
 <h1>no user in the session</h1>
@@ -10,10 +10,13 @@
    <div id="project-box1" class="mainbox col-md-12 col-sm-8 ">
 
        <div class="panel panel-body" style="background: #a6e1ec">
-           <div class="panel-heading">
+           <div class="panel-heading row">
                <h3 id="projets-title1"> your Projects...</h3>
+               <button id="btn-addProj" style="float: right;"
+                        class="button button-3d button-action button-pill">Add new</button>
+
            </div>
-           <div class="projects-box">
+           <div class="projects-box row">
                <ul>
                {{#projects}}
                    <form method="post" action="/project" >
@@ -37,10 +40,10 @@
     <br/>
     <div id="project-box2" class="mainbox col-md-12 col-sm-8 " >
         <div class="panel panel-body" style="background: #a6e1ec">
-            <div class="panel-heading">
+            <div class="panel-heading row">
                 <h3 id="projets-title2"> Projects in Collaboration...</h3>
             </div>
-            <div class="projects-box">
+            <div class="projects-box row">
                 <ul>
                     {{#projectsInCollabs}}
                         <form method="post" action="/project" >
@@ -59,3 +62,50 @@
         </div>
     </div>
 </div>
+<script type="text/javascript" src="/sweetalert/dist/sweetalert.min.js" ></script>
+<link rel="stylesheet" type="text/css" href="/sweetalert/dist/sweetalert.css"  />
+<script type="text/javascript" src="/sweetalert2/dist/sweetalert2.js" ></script>
+<link rel="stylesheet" type="text/css" href="/sweetalert2/dist/sweetalert2.css"  />
+<script type="text/javascript" src="/javascripts/swal-forms.js" ></script>
+<link rel="stylesheet" type="text/css" href="/stylesheets/swal-forms.css" />
+<script>
+    var btn_addproj = document.getElementById('btn-addProj');
+    var username = document.getElementById('welcome').innerText.split(' ')[1];
+
+    function swalAddProject() {
+        swal({
+            title: 'add new Project',
+            html: '<br/><input class="form-control" type="text" name="projName"  placeholder="project name"/><br/>' +
+                      '<textarea class="form-control" name="description" placeholder="project description"></textarea>',
+            confirmButtonText: 'add',
+            showCancelButton: true
+        }).then(function () {
+            console.log($('input[name=projName]').val() );
+            if ($('input[name=projName]').val() == "" || $('input[name=projName]').val() == null ) {
+                swal("Error", "enter data properly", "error").then(function () {
+
+                    return;
+                });
+            }
+            else {
+
+                var data = {};
+                data.name = $('input[name=projName]').val();
+                data.description = $('textarea[name=description]').val();
+                data.username = username;
+                $.ajax({
+                    url: '/saveProjectData',
+                    method: 'POST',
+                    data: JSON.stringify(data)
+                }).done(function (data) {
+                    swal("success", "project number " +data.projId + " added successfully", "success");
+                });
+            }
+        });
+
+    }
+
+    btn_addproj.onclick = function () {
+      swalAddProject();
+    };
+</script>

@@ -34,6 +34,10 @@ module.exports = function (seq) {
             type : seq.Sequelize.INTEGER,
             allowNull : true
         },
+        photo : {
+            type : seq.Sequelize.STRING,
+            allowNull : false
+        },
         isConnected : {
             type : seq.Sequelize.BOOLEAN ,
             allowNull : false ,

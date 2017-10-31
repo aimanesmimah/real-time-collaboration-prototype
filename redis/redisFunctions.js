@@ -2,7 +2,26 @@
  * Created by cloudStrife on 03/07/2017.
  */
 var flow = require('flow-maintained');
+var Scheduler = require("redis-scheduler");
+var scheduler = new Scheduler({host : 'localhost' , port : 6379});
 
+
+function eventTriggered(err,key) {
+    if(err)
+        throw err ;
+
+    //console.log('event triggered key : ' + key);
+    var docId = key.split(':')[1] ;
+    var client = require('redis').createClient({host : 'localhost' , port : 6379});
+
+    flow.exec(
+        function () {
+            client.zrem('activeDocs',docId,this.MULTI());
+        },function () {
+
+        }
+    );
+}
 
 
 module.exports.addNewOperation = function addNewOperation(client,operation,cb) {
@@ -13,7 +32,7 @@ module.exports.addNewOperation = function addNewOperation(client,operation,cb) {
     else
         action = 'remove' ;
 
-    client.select(2);
+    client.select(0);
     client.incr('op:next:id',function (err,opId) {
         if(err)
             throw err;
@@ -29,8 +48,8 @@ module.exports.addNewOperation = function addNewOperation(client,operation,cb) {
                 client.hset(operation_string,'line',action == 'insert' ? operation.op[0].si : operation.op[0].sd,this.MULTI());
                 client.hset(operation_string,'doc',operation.d,this.MULTI());
                 if(operation.op[0].user != null) {
-                    client.hset(operation_string,'user',operation.op[0].user,this.MULTI());
-                    var user_string = 'user:' + operation.op[0].user + ':OpsNbr' ;
+                    client.hset(operation_string,'user',operation.op[0].user.name,this.MULTI());
+                    var user_string = 'user:' + operation.op[0].user.name + ':OpsNbr' ;
                     client.incr(user_string,this.MULTI());
 
                 }
@@ -43,8 +62,14 @@ module.exports.addNewOperation = function addNewOperation(client,operation,cb) {
     });
 };
 
+function setActiveDocs(client,doc) {
+   client.hset('activeDocs',doc,'active',function () {
+
+   });
+};
+
 module.exports.setLinesReadonly = function getLinesReadOnly(client,operation,cb) {
-    client.select(2);
+    client.select(0);
     var doc = operation.d ;
     var readOnlyLinesList = 'readonlyLines:' + doc ;
     client.del(readOnlyLinesList,function () {
@@ -70,7 +95,7 @@ module.exports.setLinesReadonly = function getLinesReadOnly(client,operation,cb)
 };
 
 module.exports.updateLinesState = function updateLinesState(client,operation,cb) {
-    client.select(2);
+    client.select(0);
     flow.exec(
         function () {
 
@@ -117,10 +142,9 @@ module.exports.updateLinesState = function updateLinesState(client,operation,cb)
     );
 };
 
-
 module.exports.setLine = function setLine(client,operation,cb){
 
-    client.select(2);
+    client.select(0);
     flow.exec(
         function () {
             //var new_user = 'user:' + userId ;
@@ -130,28 +154,53 @@ module.exports.setLine = function setLine(client,operation,cb){
                 if (operation.op[0].start.row == operation.op[0].end.row) {
                     client.set('doc:' + operation.d + ":line:" + operation.op[0].start.row + ':text',
                         operation.op[0].currentLine, this.MULTI());
-                    client.setex('doc:' + operation.d + ":line:" + operation.op[0].start.row + ':readonly',
-                        20, "exists", this.MULTI());
+                    client.set('doc:' + operation.d + ":value" , operation.op[0].currentValue,this.MULTI());
+                    //client.setex('doc:' + operation.d + ":line:" + operation.op[0].start.row + ':readonly',20, "exists", this.MULTI());
+                    client.zadd('activeDocs',operation.op[0].docLines,operation.d,this.MULTI());
+                    client.hset('doc:' + operation.d + ":line:" + operation.op[0].start.row + ':readonly','user',operation.op[0].user.name, this.MULTI());
+                    client.hset('doc:' + operation.d + ":line:" + operation.op[0].start.row + ':readonly','color',operation.op[0].user.color, this.MULTI());
+                    scheduler.schedule({key : 'doc:' + operation.d + ":line:" + operation.op[0].start.row + ':readonly', expire : 20000,
+                        handler : eventTriggered  },function (err) {
+                        console.log(err);
+                    });
                 }
                 else {
                     var array = [];
-                    var j = 0
+                    var j = 0;
                     if(operation.op[0].si) {
                         array = operation.op[0].si.split('\n');
+                        client.set('doc:' + operation.d + ":value" , operation.op[0].currentValue,this.MULTI());
+                        client.zadd('activeDocs',operation.op[0].docLines,operation.d,this.MULTI());
                         for (var i = operation.op[0].start.row; i <= operation.op[0].end.row; i++) {
-                            client.set('doc:' + operation.d + ":line:" + i + ':text',
-                                array[j], this.MULTI());
-                            client.setex('doc:' + operation.d + ":line:" + i + ':readonly',20,"exists",this.MULTI());
+                            client.set('doc:' + operation.d + ":line:" + i + ':text', array[j], this.MULTI());
+                            //client.setex('doc:' + operation.d + ":line:" + i + ':readonly',20,"exists",this.MULTI());
+
+                            client.hset('doc:' + operation.d + ":line:" + i + ':readonly','user',operation.op[0].user.name, this.MULTI());
+                            client.hset('doc:' + operation.d + ":line:" + i + ':readonly','color',operation.op[0].user.color, this.MULTI());
+                            scheduler.schedule({key : 'doc:' + operation.d + ":line:" + i + ':readonly',
+                                expire : 20000, handler : eventTriggered  },function (err) {
+                                console.log(err);
+                            });
+
                             j++;
                         }
                     }
                     else {
                         array = operation.op[0].sd.split('\n');
+                        client.zadd('activeDocs',operation.op[0].docLines,operation.d,this.MULTI());
+                        client.set('doc:' + operation.d + ":value" , operation.op[0].currentValue,this.MULTI());
                         for(var i = operation.op[0].start.row ; i <= operation.op[0].end.row ; i++){
                                var text = client.get('doc:' + operation.d + ':line:' + i + ':text',this.MULTI());
                                 //var textReplaced = replaceAll(array[j],"",text);
                                 client.set('doc:' + operation.d + ":line:" + i + ':text',"", this.MULTI() );
-                                client.setex('doc:' + operation.d + ":line:" + i + ':readonly',20,"exists",this.MULTI());
+                                //client.setex('doc:' + operation.d + ":line:" + i + ':readonly',20,"exists",this.MULTI());
+
+                            client.hset('doc:' + operation.d + ":line:" + i + ':readonly','user',operation.op[0].user.name, this.MULTI());
+                            client.hset('doc:' + operation.d + ":line:" + i + ':readonly','color',operation.op[0].user.color, this.MULTI());
+                                scheduler.schedule({key : 'doc:' + operation.d + ":line:" + i + ':readonly',
+                                    expire : 20000, handler : eventTriggered  },function (err) {
+                                    console.log(err);
+                                });
                                 j++;
 
                         }
@@ -168,12 +217,59 @@ module.exports.setLine = function setLine(client,operation,cb){
     );
 };
 
-
-
 module.exports.getLineState = function getLineState(client,docId,lineId,cb) {
-    client.select(2);
-    client.get('doc:' + docId + ':line:' + lineId + ':readonly',function (err,lineState) {
+    client.select(0);
+    client.hget('doc:' + docId + ':line:' + lineId + ':readonly','user',function (err,user) {
+         client.hget('doc:' + docId + ':line:' + lineId + ':readonly','color',function (err,color) {
+             cb(err,user,color);
+         });
 
-        cb(err,lineState);
+    });
+};
+
+module.exports.getLineText = function getLineText(client,docId,lineId,cb) {
+    client.select(0);
+    client.get('doc:' + docId + ':line:' + lineId + ':text',function (err,lineText) {
+        cb(err,lineText);
+    });
+};
+
+module.exports.getDocText = function getDocText(client,docId,cb) {
+  client.select(0);
+  client.get('doc:' + docId + ':value',function (err,docText) {
+      cb(err,docText);
+  });
+};
+
+module.exports.getActiveDocs =function (client,cb) {
+       client.select(0);
+
+       client.zrange('activeDocs',0,-1,'withscores',function (err,activeDocs) {
+           cb(err,activeDocs);
+       });
+};
+
+module.exports.setConnectedUsers = function (client,action,projet,username) {
+    var connected_string = 'project:' + projet + ':connectedUsers' ;
+  if(action === 'remove'){
+      client.lrem(connected_string,username,function () {
+          console.log('connected user removed');
+      });
+  }
+  else if(action === 'add'){
+      client.lpush(connected_string,username,function () {
+          console.log('user added to connected users');
+      });
+  }
+  else{
+      throw new Error();
+  }
+};
+
+module.exports.getConnectedUsers = function (client,cb) {
+    client.select(0);
+
+    cient.lrange('connectedUsers',0,-1,function (err,connectedUsers) {
+        cb(err,connectedUsers);
     });
 };

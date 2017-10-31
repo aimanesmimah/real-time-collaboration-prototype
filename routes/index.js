@@ -10,6 +10,11 @@ var Document = require('../models/document')(seq);
 var Auth_Doc = require('../models/auth_doc')(seq);
 var redisConfig = require('../redis/redis');
 
+router.get('/ws',function (req,res,next) {
+    console.log("ws succeeded");
+    next();
+});
+
 /* GET home page. */
 router.get('/', function(req, res, next) {
 
@@ -36,10 +41,10 @@ router.get('/', function(req, res, next) {
                         console.log("user projects length : " + userProjects.length);
                         if (userProjects && userProjects.length > 0) {
 
-                            res.render('index', { title: 'ScreenDy' , projects : userProjects , projectsInCollabs : projs});
+                            res.render('index1', { title: 'ScreenDy' , projects : userProjects , projectsInCollabs : projs});
                         }
                         else{
-                            res.render('index', { title: 'ScreenDy' , projects : userProjects , projectsInCollabs: projs});
+                            res.render('index1', { title: 'ScreenDy' , projects : userProjects , projectsInCollabs: projs});
                         }
                     });
 
@@ -89,7 +94,7 @@ router.post('/project',function (req,res,next) {
                                         colls.splice(colls.indexOf(col),1);
                                 });
 
-                                res.render('project',{title : 'ScreenDy' , project : projet, col : col, auth : auth ,
+                                res.render('project1',{title : 'ScreenDy' , project : projet, col : col, auth : auth ,
                                     creator : creator , docs : docs , colls : colls , isCreator: isCreator });
 
                             });
@@ -111,6 +116,11 @@ router.post('/project',function (req,res,next) {
 router.get('/getDoc/:id',function (req,res,next) {
     var id = req.params.id ;
     console.log(id);
+    var newDoc = false ;
+    if(req.query['new'] == 'yes'){
+        console.log('yes');
+        newDoc = true ;
+    }
 
     Document.getDocById(id,function (doc) {
 
@@ -140,8 +150,8 @@ router.get('/getDoc/:id',function (req,res,next) {
                                             colls.splice(colls.indexOf(col), 1);
                                     });
 
-                                    res.render('project', {title: 'ScreenDy', project: projet, col : col , auth : auth ,
-                                        creator : creator, docs: docs, colls: colls, doc: doc, isCreator : isCreator});
+                                    res.render('project1', {title: 'ScreenDy', project: projet, col : col , auth : auth ,
+                                        creator : creator, docs: docs, colls: colls, doc: doc, isCreator : isCreator, newDoc : newDoc});
                                 });
                             });
                         });
@@ -174,15 +184,8 @@ router.get('/saveData/:id',function (req,res,next) {
 router.get('/getData/:id',function (req,res,next) {
 
     console.log('ajax server dkhaal');
-    /*redisConfig.getText(req.params.id,function (err,result) {
-     if(err)
-     throw err;
-
-     console.log(result.text);
-     res.send(result);
-     });*/
     Document.getDocById(req.params.id,function (doc) {
-        res.send(doc.content);
+        res.send({content : doc.content , type : doc.type});
     });
 
 });
@@ -286,6 +289,7 @@ router.post('/saveCollaborationData',function (req,res,next) {
                     userId : user.dataValues.id ,
                     begin_date : new Date(),
                     enabled : true ,
+                    color : data.color ,
                     authorizationId : auth.dataValues.id
                 });
 
@@ -301,6 +305,127 @@ router.post('/saveCollaborationData',function (req,res,next) {
 
         });
 
+    });
+
+});
+
+router.post('/getCollaboration',function (req,res,next) {
+    var data = {};
+    for(var prop in req.body){
+        data = JSON.parse(prop);
+        break;
+    }
+
+    Project.searchProject(data.project,function (proj) {
+        User.getUserById(data.userId,function (user) {
+            Col.getCollaboration(proj.dataValues.id,data.userId,function (col) {
+                Auth.getAuthById(col.dataValues.authorizationId,function (auth) {
+                    res.send({user : user , project : proj , col : col , auth : auth});
+                });
+
+            });
+        });
+    });
+
+});
+
+router.post('/saveProjectData',function (req,res,next) {
+    var data = {};
+    for (var prop in req.body)
+        data = JSON.parse(prop);
+
+    User.getUserByUsername(data.username, function (user) {
+        var proj = Project.build({
+            name: data.name,
+            description: data.description,
+            creator: user.dataValues.id
+        });
+
+        Project.addNewProject(proj, function (proj) {
+            console.log('project added successfully');
+            data.projId = proj.dataValues.id;
+
+            var auth = Auth.build({
+
+                addNewDoc: true,
+                removeDoc: true
+            });
+            Auth.addAuthorization(auth, function () {
+
+                console.log('auth added successfully');
+
+                Document.getAllDocs(function (docs) {
+                    docs.forEach(function (doc) {
+                        var auth_doc = Auth_Doc.build({
+                            authId: auth.dataValues.id,
+                            docId: doc
+                        });
+
+                        Auth_Doc.addNewAuth_doc(auth_doc, function () {
+                            console.log('auth doc added successfully');
+                        });
+                    });
+
+                    var col = Col.build({
+
+                        projectId: proj.dataValues.id,
+                        userId: user.dataValues.id,
+                        begin_date: new Date(),
+                        enabled: true,
+                        color: 'green',
+                        authorizationId: auth.dataValues.id
+                    });
+
+                    Col.newCollaboration(col, function () {
+
+                        data.newColId = col.dataValues.id;
+                        res.send(data);
+
+                    });
+
+
+                });
+
+            });
+        });
+    });
+
+});
+
+router.post('/saveDocData',function (req,res,next){
+    console.log(req.body);
+    var data = {};
+    for(var prop in req.body)
+        data = JSON.parse(prop);
+
+    console.log(data);
+    Project.searchProject(data.project,function (project) {
+        var doc = Document.build({
+            name : data.name ,
+            type : data.type ,
+            projectId : project.dataValues.id
+        });
+
+
+
+         Document.addNewDoc(doc,function (doc) {
+             console.log('document successfully added');
+             console.log(doc.dataValues.id);
+             data.docId =  doc.dataValues.id;
+             Col.getCollaboration(project.dataValues.id,project.dataValues.creator,function (col) {
+                 var auth_doc = Auth_Doc.build({
+                     authId: col.dataValues.authorizationId,
+                     docId: doc.dataValues.id
+                 });
+
+                 Auth_Doc.addNewAuth_doc(auth_doc, function () {
+                     console.log('auth doc added successfully');
+                     res.send(data);
+                 });
+             });
+
+             //res.redirect('/getDoc/' + doc.dataValues.id + '?new=yes'  );
+         });
     });
 
 });
@@ -426,21 +551,21 @@ router.get('/addDocs',function (req,res,next) {
 });
 
 router.get('/addColls',function (req,res,next) {
-    Project.searchProject('project 1',function (project) {
+    Project.searchProject('project5',function (project) {
         User.getUserByUsername('sirouuxx',function (user1) {
-            User.getUserByUsername('karim88',function (user2) {
-                var auth1 = Auth.build({
+            //User.getUserByUsername('karim88',function (user2) {
+               var auth1 = Auth.build({
                     addNewDoc : true,
                     removeDoc : true
                 });
 
-                var auth2 = Auth.build({
+                /*var auth2 = Auth.build({
                     addNewDoc : true,
                     removeDoc : true
-                });
+                });*/
 
                 Auth.addAuthorization(auth1,function () {
-                    Auth.addAuthorization(auth2,function () {
+                  //  Auth.addAuthorization(auth2,function () {
                         console.log('auths added successfully');
                         Document.searchDocument('layout',function (doc) {
                             Document.searchDocument('style',function (doc1) {
@@ -460,7 +585,7 @@ router.get('/addColls',function (req,res,next) {
                                         docId : doc2.dataValues.id
                                     });
 
-                                    var auth_doc4 = Auth_Doc.build({
+                                    /*var auth_doc4 = Auth_Doc.build({
                                         authId : auth2.dataValues.id ,
                                         docId : doc.dataValues.id
                                     });
@@ -473,13 +598,13 @@ router.get('/addColls',function (req,res,next) {
                                     var auth_doc6 = Auth_Doc.build({
                                         authId : auth2.dataValues.id ,
                                         docId : doc2.dataValues.id
-                                    });
+                                    });*/
                                     Auth_Doc.addNewAuth_doc(auth_doc1,function () {
                                         Auth_Doc.addNewAuth_doc(auth_doc2, function () {
                                             Auth_Doc.addNewAuth_doc(auth_doc3, function () {
-                                                Auth_Doc.addNewAuth_doc(auth_doc4, function () {
-                                                    Auth_Doc.addNewAuth_doc(auth_doc5, function () {
-                                                        Auth_Doc.addNewAuth_doc(auth_doc6, function () {
+                                               // Auth_Doc.addNewAuth_doc(auth_doc4, function () {
+                                                 //   Auth_Doc.addNewAuth_doc(auth_doc5, function () {
+                                                    //    Auth_Doc.addNewAuth_doc(auth_doc6, function () {
                                                             console.log('auth_docs added successfully');
 
                                                             var col1 = Col.build({
@@ -490,19 +615,19 @@ router.get('/addColls',function (req,res,next) {
                                                                 authorizationId: auth1.dataValues.id
                                                             });
 
-                                                            var col2 = Col.build({
+                                                            /*var col2 = Col.build({
                                                                 userId: user2.dataValues.id,
                                                                 projectId: project.dataValues.id,
                                                                 begin_date: new Date(),
                                                                 enabled: true,
                                                                 authorizationId: auth2.dataValues.id
-                                                            });
+                                                            });*/
 
                                                             Col.newCollaboration(col1,function () {
-                                                                Col.newCollaboration(col2,function () {
+                                                                //Col.newCollaboration(col2,function () {
                                                                     console.log('cols added successfully');
                                                                     res.render('index', { title: 'Express' });
-                                                                });
+                                                                //});
                                                             });
 
                                                         });
@@ -514,9 +639,17 @@ router.get('/addColls',function (req,res,next) {
                                 });
                             });
                         });
-                    });
-                });
-            });
+                    //});
+                //});
+            //});
+        //});
+   // });
+});
+
+router.get('/getDocById',function (req,res,next) {
+    Document.getDocById('2',function (doc) {
+        doc.updateContent("ddd",function () {
+            console.log('content update');
         });
     });
 });

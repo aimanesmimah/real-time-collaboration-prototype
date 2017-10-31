@@ -1538,51 +1538,86 @@ function getParameterByName(name, url) {
 
 var syncResource = document.getElementById('syncResource_btn');
 var m = window.document.getElementById('messages-box');
+var collaborationColor = document.getElementById('collaboration-color').innerText;
 var linesReadonly = [] ;
+var usersReadonly = [];
+var editorSynchronized = false ;
+var cursorIsInside = false ;
+//var resourceType = null ;
+var resourceId = window.href[4];
 
-//syncResource.style.visibility = 'hidden' ;
-
-console.log("dom variable : " + user + " " + projectName());
-console.log(socket);
-console.log(info_div.innerText);
 
 
-    editor.style.display = "inline" ;
-    no_edit.style.display = "none" ;
 
     // info_div.innerText =  ;
     const  editorAce = ace.edit("editor");
-    editorAce.setTheme("ace/theme/twilight");
+    editorAce.setTheme("ace/theme/default");
     const sessionAce = editorAce.getSession();
-    sessionAce.setMode("ace/mode/javascript");
+    //sessionAce.setMode("ace/mode/javascript");
     sessionAce.setNewLineMode("unix");
     const docAce = sessionAce.getDocument();
 
-    $.ajax({
-        url : '/getData/' + window.href[4] ,
-        success : function (result,statut,xhr) {
-            console.log('ajax result : ' + result);
-            docAce.setValue(result);
-        }
-    });
+function editorTypeConfig(resourceType,session){
+    if(resourceType == 'view')
+        session.setMode("ace/mode/json");
+    else if(resourceType == 'js')
+        session.setMode('ace/mode/javascript')
+    else if(resourceType == 'css')
+        session.setMode('ace/mode/css');
+}
+
+    (function retrieveDocValueFromServer(docAce,docId) {
+        $.ajax({
+            url : '/getData/' + docId ,
+            success : function (result,statut,xhr) {
+                console.log('ajax result : ' + result);
+                editorTypeConfig(result.type,sessionAce);
+                docAce.setValue(result.content);
+                //resourceType = result.type ;
+                //console.log("session ace value : " + sessionAce.getValue());
+            }
+        });
+    })(docAce,resourceId);
 
 
 var Range = ace.require('ace/range').Range ;
 
-function append_messages_box(m,user,i) {
+function docId(){
+    return resourceId ;
+}
 
-    console.log(m.childNodes.length);
+function append_messages_box(m,user,line) {
+
+    console.log('user modifying : ' + user);
+    console.log('line wooo : ' + line);
     //if(!mlis.includes(i) ){
+        var childs = m.childNodes ;
+        var exists = false ;
+        var index = 0 ;
 
-        var li = window.document.createElement("li");
-        li.innerText = user + " is working on line " + i + "..." ;
-        li.className  = "messages-box-child" ;
-        m.appendChild(li);
-        console.log("appended");
+        for(var i = 0 ; i< childs.length ; i++){
+            if(childs[i].innerText.split(' ')[0] == user) {
+                exists = true;
+                index = i;
+                break;
+            }
+        }
+
+        if(!exists) {
+            var li = window.document.createElement("li");
+            li.innerText = user + " is working on line " + line + "...";
+            li.className = "messages-box-child";
+            m.appendChild(li);
+            console.log("appended");
+        }
+        else{
+            var li = m.childNodes[index].innerText.split('.')[0] ;
+            m.childNodes[index].innerText  = li + ', ' + line + "...";
+            //exists = false ;
+        }
         //mlis.push(i);
     //}
 }
-
 
 function remove_messages_box_childs(m) {
     //if(m.hasChildNodes()){
@@ -1591,9 +1626,35 @@ function remove_messages_box_childs(m) {
     //}
 }
 
-function addMarker(i) {
+function addMarker(i,selector) {
     var range = new Range(i,0,i,Infinity);
-    editorAce.session.addMarker(range, "myMarker", "fullLine");
+    editorAce.session.addMarker(range, selector, "fullLine");
+}
+
+function stringToColorCode(str) {
+    var color_codes = {};
+    return (str in color_codes) ? color_codes[str] :
+        (color_codes[str] = '#'+ ('000000' + (Math.random()*0xFFFFFF<<0).toString(16)).slice(-6));
+}
+
+function addCSSRuleToMarker(sheet, selector,username, index) {
+
+    var colorHash =new ColorHash();
+    var hexColor = colorHash.hex(username);
+    while (hexColor.toString() === '#000000')
+            hexColor = colorHash.hex(username);
+
+    var color = stringToColorCode(username).toString();
+    //var rules = 'position:absolute; background:rgba('+ red + ','+ green +','+ blue + ',0.5); z-index:10' ;
+    var rules = 'position:absolute; background:'+color+'; z-index:10' ;
+    if("insertRule" in sheet) {
+        console.log('insert rule');
+        sheet.insertRule(selector + "{" + rules + "}", index);
+    }
+    else if("addRule" in sheet) {
+        console.log('add rule');
+        sheet.addRule(selector, rules, index);
+    }
 }
 
 function remove_markers() {
@@ -1613,44 +1674,98 @@ function objectIsEmpty(obj) {
     return Object.getOwnPropertyNames(obj).length === 0 ;
 }
 
-//var room = getParameterByName('room');
-//var user = getParameterByName('user');
-//var u = getParameterByName('u');
+function synchronizeEditor() {
+
+    const ShareAce = new __WEBPACK_IMPORTED_MODULE_0_sharedb_ace_distribution_sharedb_ace___default.a(resourceId, {
+        //WsUrl: "ws://localhost:3000/ws",
+        WsUrl: 'ws://localhost:7000' ,
+        pluginWsUrl: "ws://localhost:7000/ws",
+        namespace: "codepad",
+        user : {name : user , color : collaborationColor}
+    });
+
+    ShareAce.on('ready', function() {
+        ShareAce.add(editorAce, ["code"], [
+        ]);
+
+        //ShareAce.add(editorAce,["code2"],[])
+    });
+
+    ShareAce.doc.on('before op',function (op,source) {
+        console.log("doc data : " );
+        var data = ShareAce.doc.data ;
+        for(var prop in data)
+            console.log(prop + " : "  + data[prop]);
+    });
+
+    ShareAce.doc.on('load',function () {
+        var docId = ShareAce.doc.id ;
+        //console.log(JSON.stringify(ShareAce.doc));
+        console.log('ShareAce.doc loaded');
+        socketEditor.emit("docSync",{user : user , doc : docId  });
+    });
+
+    editorSynchronized = true ;
+    syncResource.style.display = 'none' ;
+    $('#syncronized').css('display','inline');
+    $('#syncronized').textillate({
+        in: { effect: 'rotateIn' , sync : false } ,
+        out : { effect : 'bounceOut' ,  callback : function () {
+
+        }} ,
+        minDisplayTime: 1000,
+        loop : true,
+        callback : function () {
+
+        }
+    });
+}
 
 
 
-    window.onload = function () {
-        //window.history.forward();
-        socket.emit('editorId',{editorId : user});
-    };
 
     document.body.onkeydown = function (e) {
       console.log('keykeydown');
     };
 
-    var cursorIsInside = false ;
+    var socketEditor = io('/editor');
+
+    socketEditor.on('connect',function () {
+        socketEditor.emit('socketConnected',{user : user , doc : docId()});
+    });
+
     editorAce.on('blur',function () {
         console.log("blur blur");
-        socket.emit('editorBlur',{user : user});
+        socketEditor.emit('editorBlur',{user : user});
         cursorIsInside = false ;
     });
 
     editorAce.on('focus',function () {
 
+        if(editorSynchronized) {
+            if (linesReadonly.includes(editorAce.getCursorPosition().row)) {
 
+                editorAce.blur();
 
-        if(linesReadonly.includes(editorAce.getCursorPosition().row)) {
-
-            editorAce.blur();
-
-            if(linesReadonly.includes(editorAce.getLastVisibleRow()))
-                docAce.insertNewLine({row : editorAce.getLastVisibleRow() + 1 , column :0});
+                if (linesReadonly.includes(editorAce.getLastVisibleRow()))
+                    docAce.insertNewLine({row: editorAce.getLastVisibleRow() + 1, column: 0});
+            }
+            else {
+                socketEditor.emit('foc', {user: user,doc : docId()});
+                console.log("focus emitted");
+                cursorIsInside = true;
+            }
         }
         else {
-            socket.emit('foc', {user: user});
-            console.log("focus emitted");
-            cursorIsInside = true;
+            editorAce.blur();
+            swal({
+                title : 'doc should be synchronized first' ,
+                type : 'info' ,
+                showCancelButton : false,
+                confirmButtonText : 'OK'
+            });
         }
+
     });
 
 
@@ -1660,7 +1775,7 @@ function objectIsEmpty(obj) {
             console.log("keyupped");
 
 
-                socket.emit('operation', { room: projectName(), lineNumber: editorAce.getCursorPosition().row,
+                socketEditor.emit('operation', { doc : docId(), lineNumber: editorAce.getCursorPosition().row,
                     linesNumber: editorAce.getLastVisibleRow(), user: user
                 });
 
@@ -1668,16 +1783,14 @@ function objectIsEmpty(obj) {
 
     };
 
-    socket.on('linesReadOnly',function (data) {
+    socketEditor.on('linesReadOnly',function (data) {
         console.log('linesReadOnly..........');
-        if(data.room == projectName()){
+        //if(data.room == projectName()){
             console.log('linesReadOnly :' + data.linesReadonly);
 
                 var markers = sessionAce.getMarkers(false);
                 //var markersFront = session.getMarkers(true);
                 console.log("back markers 1 : " + JSON.stringify(markers));
-
-
 
                 while(m.hasChildNodes()) {
                     remove_messages_box_childs(m);
@@ -1685,6 +1798,7 @@ function objectIsEmpty(obj) {
 
                 console.log(m.childNodes.length);
                 linesReadonly = data.linesReadonly ;
+                usersReadonly = data.usersReadonly;
 
                 if(linesReadonly.includes(editorAce.getCursorPosition().row)) {
                     console.log('blur linesReadonly');
@@ -1696,13 +1810,19 @@ function objectIsEmpty(obj) {
             console.log("back markers 2 : " + JSON.stringify(sessionAce.getMarkers()));
 
                 for(var i = 0 ; i < linesReadonly.length ; i++) {
-                    //console.log(i);
-                    addMarker(linesReadonly[i]);
-                    append_messages_box(m, user, linesReadonly[i]);
+
+                    //console.log(usersReadonly[i]);
+                    addMarker(linesReadonly[i], usersReadonly[i].split(':')[1].toString());
+                    append_messages_box(m, usersReadonly[i].split(':')[0].toString() , linesReadonly[i]);
                 }
 
-        }
+        //}
         console.log(linesReadonly);
+    });
+
+    socketEditor.on('userHasSyncDoc',function (data) {
+        $.notify("User " + data.user + " has syncronized this doc",
+            {position: 'top center', showAnimation: 'slideDown', className : 'info'});
     });
 
 
@@ -1719,47 +1839,25 @@ setInterval(function () {
     }
 
     linesReadonly = [];
+    usersReadonly = [] ;
     console.log("childnodes length : " + m.childNodes.length);
 },6000);
 
 
-    socket.on('focUser',function (data) {
+    socketEditor.on('focUser',function (data) {
         console.log('user ' + data.user + ' is focusing on writing sth');
     });
 
+
     syncResource.onclick = function () {
-        /*const ShareAce = new sharedbAce(projectName() + '.' + info_div.innerText, {
-         //WsUrl: "ws://localhost:3000/ws",
-         WsUrl: 'ws://' + window.location.host,
-         pluginWsUrl: "ws://localhost:8000/ws",
-         namespace: "codepad",
-         user : user
-         });
-
-         ShareAce.on('ready', function() {
-         ShareAce.add(editorAce, ["code"], [
-         //Do add any plugins for now
-         // SharedbAceRWControl,
-         // SharedbAceMultipleCursors
-
-         ]);
-         // ShareAce.add(editor2, ["testcases"], []);
-
-         });*/
-        syncResource.style.display = 'none' ;
-        $('#syncronized').css('display','inline');
-        $('#syncronized').textillate({
-            in: { effect: 'rotateIn' , sync : false } ,
-            out : { effect : 'bounceOut' ,  callback : function () {
-
-            }} ,
-            minDisplayTime: 1000,
-            loop : true,
-            callback : function () {
-
-            }
-        });
+      socketEditor.emit('editorSynchronized',{editorId : docId()});
     };
+
+    socketEditor.on('sharedbDocCreated',function () {
+        synchronizeEditor();
+    });
+
+
 
 $('#syncronized').on('outAnimationEnd.tlt', function () {
     // do something
@@ -1898,12 +1996,13 @@ var SharedbAce = function (_EventEmitter) {
     value: function add(ace, path, plugins) {
       var sharePath = path || [];
       var binding = new _sharedbAceBinding2.default({
-        ace: ace,
-        doc: this.doc,
-        path: sharePath,
-        pluginWS: this.pluginWS,
-        id: this.id,
-        plugins: plugins
+          ace: ace,
+          doc: this.doc,
+          path: sharePath,
+          pluginWS: this.pluginWS, 
+          user : this.user,
+          id: this.id,
+          plugins: plugins
       });
       this.connections[path.join('-')] = binding;
     }
@@ -4548,8 +4647,19 @@ var SharedbAceBinding = function () {
       op.p = this.path.concat(start);
       op.start = delta.start  ;
       op.end = delta.end ;
-      op.docLines = this.editor.getLastVisibleRow();
+      var row = this.editor.getLastVisibleRow();
+      while(aceDoc.getLine(row)  == ""  ) {
+         console.log(row);
+          row--;
+
+          if(row == 0)
+              break;
+
+      }
+      
+      op.docLines = row;
       op.currentLine = aceDoc.getLine(this.editor.getCursorPosition().row);
+      op.currentValue = aceDoc.getValue();
       op.user = this.user ;
       this.logger.log('start: ' + start + ' end: ' + end);
       var action = void 0;

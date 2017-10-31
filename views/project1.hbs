@@ -1,0 +1,652 @@
+<!--<nav style="position: fixed;z-index:5;margin-top:-51px;background: #d7d4f0">
+    <ul>
+        <li style="color : white">ayman smimah </li>
+    </ul>
+</nav>-->
+
+<div class="container project-main">
+    <div class="row">
+        <div class="col-md-9 col-sm-12" style="float: left">
+            {{#if utilisateur}}
+
+                <div class="col-md-5 col-sm-12 logo-box">
+                    <img src="/images/screendyDASH.png" title="{{title}}"/>
+
+                </div>
+                <div class="col-md-4 col-sm-12 user-box">
+                    <ul class="infos2" >
+                       <!-- <li>
+                            {{#if utilsateur.photo}}
+                                <img class="profil-image" title="{{utilisateur.username}}" src="{{utilisateur.photo}}"/>
+                            {{else}}
+                                <img class="profil-image" title="{{utilisateur.username}}" src="/images/profil/noUser.jpg" />
+                            {{/if}}
+                        </li>-->
+                        <li><h5 id="welcome" class="welcome">{{utilisateur.username}}</h5></li>
+                        <li><h5 id="project" class="welcome">project :{{project.name}} /id :{{project.id}}</h5></li>
+                        <li><h5 class="welcome">
+                            created by : {{#if isCreator}}you{{else}}{{creator.first_name}} {{creator.last_name}}{{/if}}
+                        </h5>
+                        </li>
+                        <li><h5 class="welcome">collaborators :
+                            <span><a id="btn-collaborators"  href="#"><img src="/images/add.png" title="open" /></a></span>
+                            </h5>
+                        </li>
+                        <li>
+                            <h5 class="welcome" >collaboration color :
+                                <span id="collaboration-color" style="background: {{col.color }};padding: 2px;border-radius: 6px">{{col.color}}</span>
+                            </h5>
+                        </li>
+                    </ul>
+
+                </div>
+
+
+
+            {{else}}
+                <h1>no user in the session</h1>
+            {{/if}}
+        </div>
+        <div class="col-md-3 col-sm-12 logout2" >
+            <ul>
+                <li><a id="btn-leaveProject" class="btn-leave-project" href="/" >
+                    <img src="/images/logout.png" title="leave project" />
+                </a></li>
+                <li><a id="btn-logout" class="btn-logout" href="/users/logout" ><img src="/images/primary-logout.png" title="logout" /></a></li>
+            </ul>
+
+        </div>
+    </div>
+</div>
+<br/><br/>
+<div class="row">
+    <div class="col-md-2 col-sm-12 left-box">
+        <div class="docs-box">
+            <div class="docs-box-header">
+                <h4 class="docs">Resources</h4>
+                {{#if auth.addNewDoc }}
+                    <button id="btn-addDoc" class="button button-action button-pill">add new</button>
+                {{else}}
+                    <button disabled class="button button-action button-pill">u cant add :(</button>
+                {{/if}}
+            </div>
+            <div id="docs-box" class="docs-box-content">
+
+                <div class="scrollbar" id="style-3">
+                    <ul class="scroll-list">
+                        <li>
+                            <ul class="docs-list">
+                                {{#docs}}
+                                    <!--<div id="doc-box" class="col-md-3">-->
+
+                                    <li><a id="btn-doc" class="btn-doc" href="/getDoc/{{id}}">{{name}}.{{type}}</a></li>
+
+                                    <!--</div>-->
+
+                                {{/docs}}
+                            </ul>
+                        </li>
+                        <li>
+                            <div class="force-overflow"></div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+        <div class="chat-box">
+            <div class="chat-box-header">
+
+            </div>
+            <div id="chat-box" class="chat-box-content">
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-10 col-sm-12 editor-box">
+
+            <div class="panel-heading editor-box-header">
+                <div class="btn-close-doc">
+                    <a id="btn-close-doc" href="#">Close doc?</a>
+                    <br>
+                    <p>no document</p>
+                </div>
+                <div class="doc-name">
+                    <p>{{doc.name}}</p>
+                </div>
+              </div>
+            <div class="panel-body editor-box-body">
+
+            <div id="editor-box">
+                <button id="syncResource_btn"  class="button button-raised button-pill button-inverse">
+                    synchronize resource
+                </button>
+                <p id="syncronized" >synchronized</p>
+                <ul id="messages-box"></ul>
+                <pre id="editor" ></pre>
+            </div>
+
+            <div id="no-editor-box">
+
+                <h1 id="click-on-file" >GO and open a resource...</h1>
+            </div>
+
+        </div >
+
+    </div>
+</div>
+
+
+<!--<button  class="btn btn-primary toggle-class-section">toggle</button>-->
+<!--<div class="chat-section">
+    <div class="title">
+        <a href="#" class="toggle-class-section"><img src="/images/chat.png" /></a>
+    </div>
+    <div class="content">
+        <div class="row connected">
+            <h1>connected</h1>
+        </div>
+        <div class="row">
+            <h1>chat</h1>
+        </div>
+    </div>
+</div>-->
+
+
+<!--<div style="position: absolute;top: 5px ; right: 600px;z-index: 1000">
+    <button data-action="toggle" data-side="right" >toggle right</button>
+</div>-->
+
+<script type="text/javascript" src="/javascripts/socket.io.js" ></script>
+<script type="text/javascript" src="/ace-builds/src-noconflict/ace.js" ></script>
+<script type="text/javascript" src="/sweetalert/dist/sweetalert.min.js" ></script>
+<link rel="stylesheet" type="text/css" href="/sweetalert/dist/sweetalert.css"  />
+<script type="text/javascript" src="/sweetalert2/dist/sweetalert2.js" ></script>
+<link rel="stylesheet" type="text/css" href="/sweetalert2/dist/sweetalert2.css"  />
+<script type="text/javascript" src="/javascripts/swal-forms.js" ></script>
+<link rel="stylesheet" type="text/css" href="/stylesheets/swal-forms.css" />
+<script type="text/javascript" src="/javascripts/notify.js" ></script>
+<script type="text/javascript" src="/javascripts/jquery.fittext.js" ></script>
+<script type="text/javascript" src="/javascripts/jquery.lettering.js" ></script>
+<script type="text/javascript" src="/javascripts/jquery.textillate.js" ></script>
+<link type="text/css" rel="stylesheet" href="/stylesheets/animate.css"/>
+<script src="http://yandex.st/highlightjs/7.3/highlight.min.js"></script>
+<script type="text/javascript" src="/color-hash/dist/color-hash.js" ></script>
+<script type="text/javascript" src="/jquery.sidebar/dist/jquery.sidebar.js"></script>
+
+<script>hljs.initHighlightingOnLoad();</script>
+<script type="text/javascript" src="/javascripts/variables.js"></script>
+<script type="text/javascript" src="/javascripts/sockets.js"></script>
+<script>
+    $(".toggle-class-section").click(function(e) {
+        e.preventDefault();
+        $(".chat-section").toggleClass("active");
+    });
+    $("#menu-toggle").click(function(e) {
+        e.preventDefault();
+        $("#sidebar-wrapper").toggleClass("active");
+    });
+
+    $(".toggle-class-section img").hover(function () {
+        $(".toggle-class-section img").attr('src','/images/chathover2.png');
+    },function () {
+        $(".toggle-class-section img").attr('src','/images/chat.png');
+    });
+</script>
+<script>
+
+
+
+    $('#doc-added').textillate({
+        in: {effect: 'rotateIn', sync: false},
+        out: {
+            effect: 'bounceOut', callback: function () {
+            }
+        },
+        minDisplayTime: 1000,
+        loop: true,
+        callback: function () {
+        }
+    });
+
+    //var socketMouse = io('/mouse');
+    //var socketNotifs = io('/notifications');
+
+    function projectDocs(el) {
+        var docsId = [];
+        console.log(el.childNodes.length);
+        for(var i =0 ; i < el.childNodes.length ; i++){
+            if(el.childNodes[i].tagName == 'A') {
+                var href = el.childNodes[i].getAttribute('href');
+                var id = href.split('/')[2];
+                docsId.push(id);
+            }
+        }
+        console.log(docsId.length);
+        return docsId;
+    }
+
+    function userImage(){
+
+    }
+
+    function projectName() {
+        var proj = document.getElementById('project');
+        var res = proj.innerText.split(':')[1];
+        var name = res.split(' ')[0];
+        console.log('project name' + name + 'ff');
+        return name;
+    }
+
+    function projectId() {
+        var proj = document.getElementById('project');
+        var id = proj.innerText.split(':')[2];
+        return id ;
+    }
+
+
+    function swalFormCollaborator(error,options,colorOptions) {
+        var swalFormUser = null;
+        var swalFormColor = null;
+        swal({
+            title: 'add new collaborator',
+            input: 'select',
+            inputOptions: options,
+            inputPlaceholder: 'select a user ',
+            showCancelButton: true,
+            confirmButtonText: 'add',
+            confirmButtonColor: '#22ee78',
+            inputValidator: function (value) {
+                return new Promise(function (resolve, reject) {
+                    if (value === '')
+                        reject('you need to choose a user first');
+                    else {
+                        swalFormUser = value;
+                        resolve();
+                    }
+                });
+            }
+
+        }).then(function () {
+            swal({
+                title: 'add colaboration color',
+                input: 'select',
+                inputOptions: colorOptions,
+                inputPlaceHolder: 'select a color',
+                showCancelButton: true,
+                confirmButtonText: 'add',
+                confirmButtonColor: '#22ee78',
+                inputValidator: function (value) {
+                    return new Promise(function (resolve, reject) {
+                        if (value === '')
+                            reject('you need to choose a color first');
+                        else {
+                            swalFormColor = value;
+                            resolve();
+                        }
+                    });
+                }
+            }).then(function () {
+                swal({
+                    type: 'success',
+                    html: 'You selected user: ' + swalFormUser + ' with : ' + swalFormColor + ' as coloraboration color',
+                    showCancelButton: false,
+                    confirmButtonText: 'loading authorization form...',
+                    timer: 4000
+
+                }).then(
+                        function () {
+                        },
+                        function (dismiss) {
+                            if (dismiss === 'timer')
+                                swal({
+                                    title: 'add authorization',
+                                    html: 'user : ' + swalFormUser + '<br/> no collaboration will be added without authorization<br/><br/>' +
+                                    '<input type="checkbox" name="addFile"  /><span style="margin-left: 5px">add file allowed ?</span><br/>' +
+                                    '<input type="checkbox" name="removeFile"  /><span style="margin-left: 5px">remove file allowed ?</span><br/>' +
+                                    '<h4 style="color : #785412">files allowed</h4>' +
+                                    '{{#docs}} <input id="{{id}}" type="checkbox" name="{{id}}"  /> <span style="margin: 0 10px 0 2px">{{name}}.{{type}}</span>{{/docs}}',
+                                    confirmButtonText: 'add'
+                                }).then(function () {
+                                    var data = {};
+                                    data.addFileChecked = $('input[name=addFile]').is(':checked');
+                                    data.removeFileChecked = $('input[name=removeFile]').is(':checked');
+                                    var docsId = projectDocs(docs_box);
+                                    var docs = [];
+                                    docsId.forEach(function (docId) {
+
+                                        console.log(docId + " :" + $('input[name=' + docId + ']').is(":checked"));
+
+                                        docs.push({
+                                            docId: docId,
+                                            allowed: $('input[name=' + docId + ']').is(':checked')
+                                        });
+                                    });
+
+                                    data.docs = docs;
+                                    console.log(data.docs.length);
+                                    data.user = swalFormUser;
+                                    data.color = swalFormColor;
+                                    data.projectName = projectName();
+
+                                    $.ajax({
+                                        url: '/saveCollaborationData',
+                                        method: 'POST',
+                                        data: JSON.stringify(data)
+
+                                    }).done(function (data) {
+                                        console.log(data.user);
+                                        swal({
+                                            title: 'success !',
+                                            type: 'success',
+                                            html: "Collaboration : " + data.newColId + "<br/>added successfully"
+                                        });
+                                        //swal("success !","Collaboration : "+ data.newColId + "\nadded successfully","success");
+                                        socketNotifs.emit('colAdded', {user: data.user, project: projectName()});
+                                    }).error(function (data) {
+                                        swal("Error", "Collaboration could not be added", "error");
+                                    });
+                                });
+                        }
+                );
+
+                swal.disableConfirmButton();
+            });
+
+        });
+
+    }
+
+
+    function collaborators() {
+        swal({
+            title : 'project collaborators',
+            html : '<ul class="collaborators-list">{{#colls}}' +
+                '<li id="{{id}}">{{first_name}} {{last_name}}' +
+                '<span class="action-edit"><input id="edit-input" type="submit" name="{{id}}" value="edit" /></span>' +
+                '<span class="action-delete"><input id="delete-input" type="submit" name="{{id}}" value="delete" /></span>' +
+                 '</li>' +
+            '{{/colls}}</ul>',
+            showCancelButton : true ,
+            confirmButtonText : 'add new',
+            confirmButtonColor : '#22aa11'
+        }).then(function () {
+            $.ajax({
+                url : '/getUsers' ,
+                success : function (result,statut,xhr) {
+                    console.log(result);
+
+                    var options = {};
+
+
+
+                    result.forEach(function (obj) {
+                        options[obj.username] = obj.first_name + ' ' + obj.last_name ;
+                    });
+
+                    var colorOptions = {
+                        'green' : 'green' ,
+                        'red' : 'red',
+                        'blue' : 'blue',
+                        'yellow' : 'yellow',
+                        'pink' : 'pink',
+                        'orange' : 'pink' ,
+                        'violet' : 'violet',
+                        'aqua' : 'aqua',
+                        'grey' : 'grey'
+                     };
+
+                    swalFormCollaborator('no text',options,colorOptions);
+
+
+                }
+            });
+        });
+    }
+
+    function editCollaborator(userId,projectName) {
+           var data = {};
+           data.userId = userId ;
+           data.project = projectName;
+           $.ajax({
+               url : '/getCollaboration',
+               method : 'POST',
+               data : JSON.stringify(data),
+               success : function (result,statut,xhr) {
+                   var addDocChecked = 'unchecked' ;
+                   var removeDocChecked = 'unchecked' ;
+                   if(result.auth.addNewDoc)
+                       addDocChecked = 'checked';
+                   if(result.auth.removeDoc)
+                       removeDocChecked = 'checked';
+                   //swal("success",JSON.stringify(result.project) + "\n" + result.user + "\n"  + result.col + "\n" +
+                       //    JSON.stringify(result.auth) ,"success");
+                   swal({
+                       title : 'collaboration edition for ' + result.user.username,
+                       html : '<ul class="col-edition-list">' +
+                       '<li><h5>begin date : ' + result.col.begin_date+ '</h5></li>' +
+                       '<li><h5>end date : <input type="date" name="enddate"  /></h5></li>'+
+                       '</ul>' +
+                       '<h4>authorizations</h4>' +
+                       '<ul class="col-edition-list">' +
+                       '<li><input type="checkbox" name="addFile"  ' + addDocChecked+ ' /> ' +
+                               '<span style="margin-left: 5px">add file allowed ?</span></li>' +
+                       '<li><input type="checkbox" name="removeFile" ' +removeDocChecked+ '  /><span style="margin-left: 5px">remove file allowed ?</span></li>' +
+                       '<li></li>' +
+                       '</ul>'
+                   });
+               }
+           });
+    }
+
+    function swalAddDoc() {
+        swal({
+            title: 'add new Doc',
+            html: '<select id="type-options" name="type-options" placeholder="select a type">' +
+            '<option value="" disabled selected >select type</option>' +
+            '<option value="view">view</option><option value="js">JS</option>' +
+            '<option value="css">CSS</option></select>' +
+            '<br/><br/><input type="text" name="docName"  placeholder="doc name"/>',
+            confirmButtonText: 'add',
+            showCancelButton: true
+        }).then(function () {
+            if ($('input[name=docName]').val() == "" || $('select[name=type-options]').val() == null) {
+                swal("Error", "enter data properly", "error").then(function () {
+
+                    return;
+                });
+            }
+            else {
+                console.log($('input[name=docName]').val());
+                console.log($('select[name=type-options]').val());
+                var data = {};
+                data.name = $('input[name=docName]').val();
+                data.type = $('select[name=type-options]').val();
+                data.project = projectName();
+                $.ajax({
+                    url: '/saveDocData',
+                    method: 'POST',
+                    data: JSON.stringify(data)
+                }).done(function (data) {
+                    swal("success", "doc added successfully", "success");
+                });
+            }
+        });
+
+    }
+
+    function textChanged() {
+        console.log("changed");
+    }
+
+    if(href[3] === "project"){
+        console.log("dok");
+        editor.style.display = "none" ;
+        no_edit.style.display = "inline" ;
+
+        //info_div.innerText = "no document" ;
+    }
+
+    if(href[3] != "project"){
+        $('.doc-name p').css('display','inline');
+        $('.btn-close-doc p').css('display','none');
+        $('.btn-close-doc a').css('display','inline');
+        no_edit.style.display  = "none";
+        editor.style.display = "inline" ;
+    }
+
+    btn_close_doc.onclick = function () {
+        editor.style.display = "none" ;
+        no_edit.style.display = "inline";
+        $('.doc-name p').css('display','none');
+        //info_div.innerText = "no document" ;
+    };
+
+    /*socketMouse.on('connect',function () {
+        socketMouse.emit('socketConnected',{user : user , project : projectName()})
+    });
+
+    $(document).on('mousemove',function (event) {
+        socketMouse.emit('mouse-activity',{x: event.pageX , y : event.pageY ,
+            user : user , project : projectName()});
+    });
+
+    socketMouse.on('all-mouse-activity',function (data) {
+        console.log(data.user);
+        //if(projectName() === data.project) {
+        if ($('.pointer[session_id="' + data.sessionId + '"]').length <= 0) {
+            console.log('dkhooool');
+            $('body').append('<div class="pointer"  session_id="' + data.sessionId + '"><p>' + data.sessionId + '</p></div>');
+        }
+
+        var $pointer = $('.pointer[session_id="' + data.sessionId + '"]');
+
+        //$pointer.css('display','inline');
+        $pointer.css('left', data.coords.x);
+        $pointer.css('top', data.coords.y);
+
+        //  }
+    });
+
+    socketNotifs.on('connect',function () {
+        socketNotifs.emit('socketConnected',{user : user , project : projectName()});
+        console.log("connected");
+        if(window.href[3] !== 'getDoc')
+            socketNotifs.emit('user',{user : user , project : projectName()});
+    });
+
+    socketNotifs.on('new',function (data) {
+        //if(projectName() === data.project)
+        $.notify("User " + data.user + " has joined", {position: 'top center', showAnimation: 'slideDown',
+            className : 'info'});
+
+    });
+
+    socketNotifs.on('newCol',function (data) {
+        //if(projectName() === data.project)
+        $.notify("User " + data.user + " has been added to the collaboration", {position: 'top center', showAnimation: 'slideDown',
+            className : 'info'});
+    });*/
+
+    /*var docs_box_clicked = false ;
+    var leave_btn_clicked = false ;
+    var logout_btn_clicked = false ;
+
+    docs_box.onclick = function () {
+        docs_box_clicked = true ;
+    };
+
+    window.onunload = function () {
+
+        if(!docs_box_clicked && !leave_btn_clicked && !logout_btn_clicked)
+            socketNotifs.emit('userQuit',{user:user , project : projectName()});
+    };
+
+    logout.onclick = function () {
+        logout_btn_clicked = true ;
+        socketNotifs.emit('userQuit',{user:user, project : projectName()});
+    };
+
+    leave_project.onclick = function () {
+        leave_btn_clicked = true ;
+        socketNotifs.emit('userQuit',{user:user , project : projectName()});
+    };
+
+    socketNotifs.on('userHasQuit',function (data) {
+        //if(projectName() === data.project) {
+        console.log('disconnected');
+        $.notify("User " + data.user + " has quiet",{position: 'top center', showAnimation: 'slideDown',
+            className : 'info'});
+        var $pointer = $('.pointer[session_id="' + data.user + '"]');
+        $pointer.remove();
+        //}
+    });*/
+
+
+    if(href[3] === 'project') {
+        $('#welcome').textillate({
+            in: { effect: 'fadeInLeftBig' , sync : false } ,
+            out : { effect : 'bounceOut'} ,
+            minDisplayTime: 500,
+            callback : function () {
+
+            }
+        });
+
+        $('#welcome').on('outAnimationBegin.tlt',function () {
+            //$('#project').show();
+        });
+
+        console.log("notifyy");
+        var currentDate = new Date(),
+                hours = currentDate.getHours();
+
+        if (hours < 12)
+            $.notify("Good morning", {position: 'top center'});
+        else
+            $.notify("Good evening", {position: 'top center', showAnimation: 'slideDown'});
+
+        $.notify("another notification", {position: 'top center', showAnimation: 'slideDown'});
+    }
+
+    btn_collaborators.onclick = function () {
+        collaborators();
+    };
+
+    $(document).on('click','#edit-input',function () {
+       console.log(this.name);
+       editCollaborator(this.name,projectName());
+    });
+
+    btn_addDoc.onclick = function () {
+        swalAddDoc();
+    };
+
+    if(addCollaborator) {
+        addCollaborator.onclick = function () {
+            $.ajax({
+                url : '/getUsers' ,
+                success : function (result,statut,xhr) {
+                    console.log(result);
+
+                    var options = {};
+
+                    result.forEach(function (obj) {
+                        options[obj.username] = obj.first_name + ' ' + obj.last_name ;
+                    });
+
+
+                    swalFormCollaborator('no text',options);
+
+
+                }
+            });
+
+        };
+    }
+
+</script>
+{{#if doc}}
+    <script type="text/javascript" src="/bundle/bundle3.js"></script>
+{{/if}}
